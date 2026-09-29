@@ -270,16 +270,56 @@ h1, h2, h3, .brand, .kicker, .tab, .stat b, .dc { font-family: Cinzel, "Times Ne
 .choices { display: flex; flex-wrap: wrap; gap: 6px; }
 .choices button.on { background: var(--ink); color: var(--paper); }
 .perk-slot, .train-slot { display: grid; grid-template-columns: minmax(0, 140px) minmax(0, 1fr); gap: 8px; align-items: center; margin: 6px 0; min-width: 0; max-width: 100%; }
-.list-pick { display: flex; flex-direction: column; gap: 4px; max-height: 320px; overflow: auto; padding-right: 4px; min-width: 0; }
+.list-pick { display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow: auto; padding-right: 4px; min-width: 0; }
 .list-pick label {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 8px;
+  gap: 10px 12px;
   align-items: start;
-  padding: 6px;
+  padding: 8px 10px;
   background: rgba(255, 255, 255, 0.35);
   min-width: 0;
 }
+.list-pick label > span:first-of-type {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.list-pick label small { display: block; line-height: 1.4; }
+.spell-list { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.spell-list.scroll { max-height: 420px; overflow: auto; padding-right: 4px; }
+.spell-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px 14px;
+  align-items: center;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(36, 25, 16, 0.08);
+  min-width: 0;
+}
+.spell-copy { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.spell-name { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
+.spell-name strong { font-family: Cinzel, serif; font-weight: 600; }
+.spell-copy small { display: block; line-height: 1.4; }
+.spell-tag {
+  font-family: Cinzel, serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.spell-filters { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 8px 0; }
+.spell-filters button.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.spell-filters select {
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  padding: 7px 8px;
+}
+.spell-tools .search { width: 100%; min-width: 0; margin-bottom: 0; }
 .two { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 .shop-item, .inv-item { grid-template-columns: minmax(0, 1fr) auto auto; padding: 8px; margin-bottom: 6px; background: rgba(255, 255, 255, 0.45); }
 .search { min-width: 180px; }
@@ -342,6 +382,8 @@ ol.steps li { margin: 6px 0; }
   .perk-slot, .train-slot { grid-template-columns: minmax(0, 1fr); }
   .skill, .weapon, .inv-item, .shop-item { grid-template-columns: minmax(0, 1fr); }
   .skill .dc, .weapon .dc { justify-self: start; }
+  .spell-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .spell-tag { justify-self: start; }
   .toolbar { align-items: stretch; }
   .tabs { width: 100%; }
   .tab { flex: 1 1 auto; text-align: center; padding: 7px 8px; }

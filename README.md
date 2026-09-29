@@ -1,5 +1,7 @@
 # Vagabond Character Sheet Editor
 
+Extremely vibe coded, and made just for fun to help us in our campaign. Expect rough edges.
+
 A shared character manager for [Vagabond](https://landoftheblind.myshopify.com/collections/vagabond-pulp-fantasy-rpg), the pulp fantasy RPG from Land of the Blind. It builds a hero from ancestry, class, stats, trainings, perks, spells, and gear, then tracks the numbers you touch in play: hit points, mana, luck, fatigue, wealth, and dice.
 
 Open the same address on another machine at the table and everyone shares one party, live. Heroes are saved on the server. With no database configured, they go in a local SQLite file. Set `DATABASE_URL` to use Postgres instead (as on Deno Deploy).

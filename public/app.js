@@ -21,6 +21,8 @@ const state = {
   gearQuery: "",
   gearCat: "All",
   spellQuery: "",
+  spellFilter: "all",
+  spellType: "",
   loot: false,
   timer: 0,
   qs: [false, false, false, false, false, false],
@@ -263,29 +265,76 @@ function attackProfile(hero, item, sheet) {
   return { skill: options[0], trained: options.some((skill) => skill.trained), damage: weaponDamage(item) };
 }
 
+let shownView = "";
+let renderGen = 0;
+
+function viewKey() {
+  return state.party ? "party" : `${state.id || ""}:${state.tab}`;
+}
+
 function focusSnapshot() {
   const active = document.activeElement;
-  if (!active || !active.matches?.("input, textarea, select") || !active.id) return null;
-  return { id: active.id, start: active.selectionStart, end: active.selectionEnd };
+  if (!(active instanceof HTMLElement) || !active.matches("input, textarea, select")) return null;
+  const snap = { start: active.selectionStart, end: active.selectionEnd };
+  if (active.id) return { ...snap, id: active.id };
+  if (!active.dataset.act) return null;
+  const extras = ["index", "stat", "slot"]
+    .filter((key) => active.dataset[key] != null)
+    .map((key) => `[data-${key}="${CSS.escape(active.dataset[key])}"]`)
+    .join("");
+  return { ...snap, selector: `${active.tagName.toLowerCase()}[data-act="${CSS.escape(active.dataset.act)}"]${extras}` };
 }
 
 function restoreFocus(snap) {
   if (!snap) return;
-  const el = document.getElementById(snap.id);
+  const el = snap.id ? document.getElementById(snap.id) : document.querySelector(snap.selector);
   if (!el) return;
-  el.focus();
+  el.focus({ preventScroll: true });
   if (typeof snap.start === "number" && el.setSelectionRange) {
     try { el.setSelectionRange(snap.start, snap.end); } catch { /* number inputs */ }
   }
 }
 
+function captureScroll(sameView) {
+  if (!sameView) return null;
+  const main = document.querySelector(".app");
+  if (!main) return null;
+  return {
+    top: main.scrollTop,
+    left: main.scrollLeft,
+    nested: [...document.querySelectorAll("[data-scroll]")].map((el) => [el.dataset.scroll, el.scrollTop]),
+  };
+}
+
+function restoreScroll(saved) {
+  if (!saved) return;
+  const main = document.querySelector(".app");
+  if (main) {
+    main.scrollTop = saved.top;
+    main.scrollLeft = saved.left;
+  }
+  for (const [key, top] of saved.nested) {
+    const el = document.querySelector(`[data-scroll="${CSS.escape(key)}"]`);
+    if (el) el.scrollTop = top;
+  }
+}
+
 function render() {
+  const gen = ++renderGen;
   const snap = focusSnapshot();
+  const nextView = viewKey();
+  const saved = captureScroll(shownView === nextView);
   const hero = current();
   if (hero) normalize(hero);
   const sheet = hero ? derive(hero) : null;
   app.innerHTML = layout(hero, sheet);
+  restoreScroll(saved);
   restoreFocus(snap);
+  shownView = nextView;
+  if (!saved) return;
+  requestAnimationFrame(() => {
+    if (gen === renderGen) restoreScroll(saved);
+  });
 }
 
 function layout(hero, sheet) {
@@ -697,7 +746,7 @@ function gear(hero, sheet) {
             <select data-act="gear-cat">${cats.map((cat) => option(cat, cat, state.gearCat === cat)).join("")}</select>
             <label class="check"><input type="checkbox" data-act="loot" ${state.loot ? "checked" : ""}> Loot, don't pay</label>
           </div>
-          <div class="list-pick">
+          <div class="list-pick" data-scroll="market">
             ${items.map((item) => `
               <button class="shop-item" data-act="buy" data-id="${item.id}">
                 <span><strong>${esc(item.name)}</strong><small class="muted">${esc(item.kind)}${item.damage ? ` · ${esc(item.damage)}` : ""}${item.rating ? ` · armor ${item.rating}` : ""} · ${item.slots} slot${item.slots === 1 ? "" : "s"}</small></span>
@@ -732,11 +781,19 @@ function invRow(item) {
     </div>`;
 }
 
+const SPELL_FILTERS = [
+  ["all", "All"],
+  ["known", "Known"],
+  ["damage", "Damage"],
+  ["plain", "No damage"],
+  ["object", "Object"],
+];
+const SPELL_TYPES = ["Acid", "Cold", "Fire", "Poison", "Shock", "Blunt"];
+
 function magic(hero, sheet) {
   const cls = classById(hero.classId);
-  const query = state.spellQuery.toLowerCase();
-  const spells = SPELLS.filter((spell) => !query || spell.name.toLowerCase().includes(query) || (spell.damage || "").toLowerCase().includes(query));
   const known = new Set(hero.spells || []);
+  const catalog = SPELLS.filter((spell) => spellVisible(spell, known));
   return `
     <article class="sheet">
       ${warnings(sheet)}
@@ -756,16 +813,22 @@ function magic(hero, sheet) {
             <select data-act="elf-cast">${["arcana", "mysticism", "influence", "survival", "leadership"].map((id) => option(id, skillName(id), hero.elfCastSkill === id)).join("")}</select>
           </label>
         </div>` : ""}
-      ${sheet.secretSpells.length ? `<p>${sheet.secretSpells.map((spell) => `Magical Secret: <strong>${esc(spell.name)}</strong>`).join(" · ")}</p>` : ""}
-      <div class="two" style="margin-top:12px">
+      <h2 style="margin-top:16px">Spells known</h2>
+      <div class="spell-list">
+        ${knownSpellRows(hero, sheet, cls)}
+      </div>
+      <div class="two" style="margin-top:16px">
         <section>
-          <h2>Spells known</h2>
-          <input id="spell-query" class="search" data-ui="spellQuery" placeholder="Search spells" value="${esc(state.spellQuery)}">
-          <div class="list-pick" style="margin-top:8px">
-            ${spells.map((spell) => {
-              const locked = cls?.requiredSpell === spell.id;
-              return `<label><input type="checkbox" data-act="spell" data-id="${spell.id}" ${known.has(spell.id) ? "checked" : ""} ${locked ? "disabled" : ""}><span><strong>${esc(spell.name)}</strong><small class="muted">${esc(spell.summary)}</small></span><span>${esc(spell.damage || "—")}</span></label>`;
-            }).join("")}
+          <h2>Add a spell</h2>
+          <div class="spell-tools">
+            <input id="spell-query" class="search" data-ui="spellQuery" placeholder="Search spells" value="${esc(state.spellQuery)}">
+          </div>
+          <div class="spell-filters">
+            ${SPELL_FILTERS.map(([id, label]) => `<button class="ghost ${state.spellFilter === id ? "on" : ""}" data-act="spell-filter" data-filter="${id}">${label}</button>`).join("")}
+            <select data-act="spell-type" aria-label="Damage type">${option("", "Any type", !state.spellType)}${SPELL_TYPES.map((type) => option(type, type, state.spellType === type)).join("")}</select>
+          </div>
+          <div class="spell-list scroll" data-scroll="spells">
+            ${catalog.map((spell) => spellLine(spell, catalogAction(spell, known, cls))).join("") || `<p class="muted">No spells match.</p>`}
           </div>
         </section>
         <section>
@@ -774,6 +837,69 @@ function magic(hero, sheet) {
         </section>
       </div>
     </article>`;
+}
+
+function catalogAction(spell, known, cls) {
+  if (!known.has(spell.id)) return { action: "spell-add", label: "Add" };
+  if (cls?.requiredSpell === spell.id) return { note: "Class spell" };
+  return { action: "spell-forget", label: "Remove" };
+}
+
+function spellVisible(spell, known) {
+  const query = state.spellQuery.trim().toLowerCase();
+  if (query) {
+    const hay = `${spell.name} ${spell.summary} ${spell.damage || ""}`.toLowerCase();
+    if (!hay.includes(query)) return false;
+  }
+  if (state.spellFilter === "known" && !known.has(spell.id)) return false;
+  if (state.spellFilter === "damage" && !spell.damage) return false;
+  if (state.spellFilter === "plain" && spell.damage) return false;
+  if (state.spellFilter === "object" && !spell.object) return false;
+  if (state.spellType && spell.damage !== state.spellType) return false;
+  if (state.spellFilter !== "known" && known.has(spell.id)) return false;
+  return true;
+}
+
+function knownSpellRows(hero, sheet, cls) {
+  const rows = [];
+  const seen = new Set();
+  for (const id of hero.spells || []) {
+    const spell = spellById(id);
+    if (!spell) continue;
+    seen.add(id);
+    const locked = cls?.requiredSpell === id;
+    rows.push(spellLine(spell, locked
+      ? { note: "Class spell" }
+      : { action: "spell-forget", label: "Remove" }));
+  }
+  if (hero.elfSpell && !seen.has(hero.elfSpell)) {
+    const spell = spellById(hero.elfSpell);
+    if (spell) {
+      seen.add(spell.id);
+      rows.push(spellLine(spell, { note: "Naturally Attuned" }));
+    }
+  }
+  for (const secret of sheet.secretSpells) {
+    if (seen.has(secret.id)) continue;
+    const spell = spellById(secret.id);
+    if (!spell) continue;
+    seen.add(secret.id);
+    rows.push(spellLine(spell, { note: "Magical Secret" }));
+  }
+  return rows.join("") || `<p class="muted">No spells yet.</p>`;
+}
+
+function spellLine(spell, { note = "", action = "", label = "" } = {}) {
+  const tags = [spell.damage, spell.object ? "Object" : ""].filter(Boolean);
+  return `
+    <div class="spell-row">
+      <span class="spell-copy">
+        <span class="spell-name"><strong>${esc(spell.name)}</strong>${note ? `<small class="muted">${esc(note)}</small>` : ""}</span>
+        <small class="muted">${esc(spell.summary)}</small>
+      </span>
+      <span class="spell-tag">${tags.length ? esc(tags.join(" · ")) : "—"}</span>
+      ${action ? `<button class="ghost" data-act="${action}" data-id="${spell.id}">${esc(label)}</button>` : `<span></span>`}
+    </div>`;
 }
 
 function caster(hero, sheet) {
@@ -829,7 +955,7 @@ function formulae(hero, sheet) {
   return `
     <h2 style="margin-top:16px">Formulae ${known.size} / ${sheet.formulaLimit}</h2>
     <p class="muted">Cap ${esc(formatMoney(cap))}. Crafting still wants 5s of materials and alchemy tools.</p>
-    <div class="list-pick">
+    <div class="list-pick" data-scroll="formulae">
       ${ALCHEMY.filter((item) => item.value <= cap || known.has(item.id)).map((item) => `
         <label>
           <input type="checkbox" data-act="formula" data-id="${item.id}" ${known.has(item.id) ? "checked" : ""} ${item.value > cap ? "disabled" : ""}>
@@ -976,6 +1102,8 @@ function onAct(el) {
   if (act === "question") { state.qs[Number(el.dataset.i)] = el.checked; render(); return; }
   if (act === "loot") { state.loot = el.checked; render(); return; }
   if (act === "gear-cat") { state.gearCat = el.value; render(); return; }
+  if (act === "spell-filter") { state.spellFilter = el.dataset.filter || "all"; render(); return; }
+  if (act === "spell-type") { state.spellType = el.value; render(); return; }
   if (act === "cast-spell") { state.castSpell = el.value; state.dice = spellById(el.value)?.damage ? 1 : 0; render(); return; }
   if (act === "cast-delivery") { state.delivery = el.value; render(); return; }
   if (act === "cast-effect") { state.effect = el.checked; render(); return; }
@@ -1033,7 +1161,11 @@ function onAct(el) {
     const item = hero.items.find((entry) => entry.uid === el.dataset.uid);
     if (item) item.gripMode = item.gripMode === "2h" ? "1h" : "2h";
   } else if (act === "custom") addCustom(hero);
-  else if (act === "spell") toggleList(hero, "spells", el.dataset.id, el.checked);
+  else if (act === "spell-add") toggleList(hero, "spells", el.dataset.id, true);
+  else if (act === "spell-forget") {
+    if (classById(hero.classId)?.requiredSpell === el.dataset.id) return;
+    toggleList(hero, "spells", el.dataset.id, false);
+  }
   else if (act === "formula") toggleList(hero, "formulae", el.dataset.id, el.checked);
   else if (act === "condition") {
     hero.conditions = hero.conditions.includes(el.dataset.name)
