@@ -1,0 +1,23 @@
+{
+  "tasks": {
+    "start": "deno run --watch --allow-net --allow-read --allow-write --allow-env server.ts",
+    "test": "deno test engine_test.js"
+  },
+  "name": "vagabond character sheet editor",
+  "version": "0.0.1",
+  "description": "A tool for creating and managing characters for the Vagabond RPG",
+  "deploy": {
+    "org": "citiral",
+    "app": "vagabond-heroes",
+    "runtime": {
+      "type": "dynamic",
+      "entrypoint": "./server.ts"
+    }
+  }
+}
+
+
+
+
+
+
