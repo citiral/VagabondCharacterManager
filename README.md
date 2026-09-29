@@ -6,6 +6,8 @@ Open the same address on another machine at the table and everyone shares one pa
 
 Rules data is original shorthand for use at the table, based on the Core Rulebook v3 alpha preview. It is not a substitute for the book.
 
+![Hero record](docs/hero-record.png)
+
 ## Run
 
 Install [Deno](https://deno.land/), then from this directory:
