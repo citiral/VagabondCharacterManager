@@ -46,6 +46,7 @@ const types: Record<string, string> = {
   ".css": "text/css; charset=utf-8",
   ".svg": "image/svg+xml",
   ".json": "application/json",
+  ".pdf": "application/pdf",
   ".ico": "image/x-icon",
 };
 

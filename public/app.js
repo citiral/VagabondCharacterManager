@@ -364,7 +364,7 @@ function layout(hero, sheet) {
             ).join("")}
           </div>
           <div class="row">
-            ${hero ? `<button class="ghost" data-act="duplicate">Duplicate</button><button class="ghost" data-act="delete">Delete</button><button class="ghost" data-act="export-one">Export</button>` : ""}
+            ${hero ? `<button class="ghost" data-act="duplicate">Duplicate</button><button class="ghost" data-act="delete">Delete</button><button class="ghost" data-act="export-pdf">Export PDF</button><button class="ghost" data-act="export-one">Export JSON</button>` : ""}
             <div class="save-state">${esc(state.saving)}</div>
           </div>
         </div>
@@ -1189,6 +1189,10 @@ function onAct(el) {
   else if (act === "delete") return removeHero(hero);
   else if (act === "duplicate") return copyHero(hero);
   else if (act === "export-one") return download(`${hero.name || "hero"}.json`, hero);
+  else if (act === "export-pdf") {
+    exportPdf(hero);
+    return;
+  }
   else if (act === "roll-skill") return rollSkill(hero, el.dataset.skill);
   else if (act === "roll-save") return rollSave(hero, el.dataset.save);
   else if (act === "roll-weapon") return rollWeapon(hero, el.dataset.uid);
@@ -1406,6 +1410,23 @@ async function createHero() {
   state.party = false;
   localStorage.setItem("vagabond-id", saved.id);
   render();
+}
+
+let pdfBusy = false;
+
+async function exportPdf(hero) {
+  if (pdfBusy) return;
+  pdfBusy = true;
+  try {
+    const { downloadHeroRecord } = await import("./sheet-pdf.js");
+    await downloadHeroRecord(hero);
+  } catch (error) {
+    console.error(error);
+    state.error = "Couldn't build the PDF sheet.";
+    render();
+  } finally {
+    pdfBusy = false;
+  }
 }
 
 function download(filename, data) {
