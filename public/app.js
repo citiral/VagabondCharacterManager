@@ -8,6 +8,12 @@ import {
   xpToLevel,
 } from "./engine.js";
 
+function trayStartsMin() {
+  const saved = localStorage.getItem("vagabond-tray");
+  if (saved === "min" || saved === "open") return saved === "min";
+  return window.matchMedia("(max-width: 800px), (max-height: 520px)").matches;
+}
+
 const state = {
   heroes: [],
   id: localStorage.getItem("vagabond-id") || "",
@@ -15,6 +21,7 @@ const state = {
   party: false,
   favor: 0,
   explode: false,
+  trayMin: trayStartsMin(),
   log: [],
   saving: "Connecting…",
   error: "",
@@ -989,21 +996,48 @@ function party() {
     </section>`;
 }
 
+function rollStatus(entry) {
+  if (!entry?.detail?.includes(" vs ")) return "";
+  if (entry.crit) return "Crit";
+  return entry.pass ? "Pass" : "Fail";
+}
+
 function tray() {
   const last = state.log[0];
+  const line = last
+    ? logLine(last)
+    : `<span class="hint">${state.trayMin ? "Show the tray to roll." : "Tap a skill, save, or weapon."}</span>`;
+  const status = rollStatus(last);
+  const statusKlass = last?.crit ? "crit" : last?.pass ? "pass" : "fail";
+  if (state.trayMin) {
+    return `
+      <footer class="tray is-min no-print">
+        <button type="button" class="tray-toggle" data-act="tray" aria-expanded="false">
+          <span class="tray-mark">Dice</span>
+          <span class="tray-peek">${line}</span>
+          ${status ? `<span class="tray-status ${statusKlass}">${status}</span>` : ""}
+          <span class="tray-fold">Show</span>
+        </button>
+      </footer>`;
+  }
   return `
     <footer class="tray no-print">
-      <div class="dice-row">
-        ${[["Hinder", -1], ["Straight", 0], ["Favor", 1]].map(([name, value]) =>
-          `<button class="ghost ${state.favor === value ? "on" : ""}" data-act="favor" data-value="${value}">${name}</button>`
-        ).join("")}
-        <label class="check"><input id="explode" type="checkbox" data-act="explode" ${state.explode ? "checked" : ""}> Exploding</label>
+      <div class="tray-tools">
+        <div class="favor-set" role="group" aria-label="Favor">
+          ${[["Hinder", -1], ["Straight", 0], ["Favor", 1]].map(([name, value]) =>
+            `<button type="button" class="ghost ${state.favor === value ? "on" : ""}" data-act="favor" data-value="${value}" aria-pressed="${state.favor === value}">${name}</button>`
+          ).join("")}
+        </div>
+        <button type="button" class="ghost explode-toggle ${state.explode ? "on" : ""}" data-act="explode" aria-pressed="${state.explode}">Explode</button>
       </div>
-      <div class="dice-row">
-        ${[4, 6, 8, 10, 12, 20].map((sides) => `<button class="ghost" data-act="die" data-sides="${sides}">d${sides}</button>`).join("")}
-        <button class="ghost" data-act="d66">d66</button>
+      <div class="tray-dice">
+        ${[4, 6, 8, 10, 12, 20].map((sides) => `<button type="button" class="ghost" data-act="die" data-sides="${sides}">d${sides}</button>`).join("")}
+        <button type="button" class="ghost" data-act="d66">d66</button>
       </div>
-      <div class="log">${last ? logLine(last) : `<span class="hint">Click a skill, save, or weapon to roll. Crits are read off the unmodified d20.</span>`}</div>
+      <div class="tray-foot">
+        <div class="log">${line}</div>
+        <button type="button" class="tray-fold" data-act="tray" aria-expanded="true">Hide</button>
+      </div>
     </footer>`;
 }
 
@@ -1096,7 +1130,13 @@ function onAct(el) {
   if (act === "select") { state.id = el.dataset.id; state.party = false; localStorage.setItem("vagabond-id", state.id); render(); return; }
   if (act === "open") { state.id = el.dataset.id; state.party = false; state.tab = "record"; localStorage.setItem("vagabond-id", state.id); render(); return; }
   if (act === "favor") { state.favor = Number(el.dataset.value); render(); return; }
-  if (act === "explode") { state.explode = el.checked; return; }
+  if (act === "explode") { state.explode = !state.explode; render(); return; }
+  if (act === "tray") {
+    state.trayMin = !state.trayMin;
+    localStorage.setItem("vagabond-tray", state.trayMin ? "min" : "open");
+    render();
+    return;
+  }
   if (act === "die") return pushAndRender(plainDie(Number(el.dataset.sides)));
   if (act === "d66") return pushAndRender({ title: "d66", detail: String(rollD66()), pass: true });
   if (act === "question") { state.qs[Number(el.dataset.i)] = el.checked; render(); return; }
