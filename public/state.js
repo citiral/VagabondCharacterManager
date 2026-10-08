@@ -18,6 +18,8 @@ export const state = {
   trayMin: trayStartsMin(),
   log: [],
   saving: "Connecting…",
+  username: "",
+  role: "",
   error: "",
   gearQuery: "",
   gearCat: "All",

@@ -15,6 +15,7 @@ export function layout(hero, sheet) {
         <p class="kicker">Land of the Blind</p>
         <h1 class="brand">VAGA<span>BOND</span></h1>
         <p class="tagline">Hero record for the table.</p>
+        ${state.username ? `<p class="signed-in">${esc(state.username)}</p>` : ""}
         <div class="side-actions">
           <button class="primary" data-act="new">New hero</button>
           <button class="ghost" data-act="party">${state.party ? "Back to sheet" : "Whole table"}</button>
@@ -24,8 +25,10 @@ export function layout(hero, sheet) {
           <button class="ghost" data-act="export-all">Export party</button>
           <button class="ghost" data-act="import">Import</button>
           <input id="import-file" type="file" accept="application/json" hidden>
+          <a class="ghost ${state.role === "admin" ? "" : "hidden"}" href="/admin">Approvals</a>
+          <form method="post" action="/logout"><button class="ghost" type="submit">Sign out</button></form>
         </div>
-        <p class="hint">Open this address on another machine at the table and you share the same party, live. Coin is 1g = 100s = 1000c.</p>
+        <p class="hint">Anyone signed in here shares this party, live. Coin is 1g = 100s = 1000c.</p>
       </aside>
       <main class="stage">
         <div class="toolbar no-print">

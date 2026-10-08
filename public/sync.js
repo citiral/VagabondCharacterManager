@@ -146,6 +146,7 @@ export function scheduleSave(hero, immediate = false) {
 export async function load() {
   app.innerHTML = `<p class="banner">Connecting…</p>`;
   connect();
+  loadAccount();
   const liveBoot = await Promise.race([
     bootPromise.then(() => true),
     new Promise((resolve) => setTimeout(() => resolve(false), 2500)),
@@ -159,6 +160,15 @@ export async function load() {
   if (!current() && state.heroes[0]) state.id = state.heroes[0].id;
   state.saving = "Saved";
   render();
+}
+
+async function loadAccount() {
+  const response = await fetch("/api/me");
+  if (!response.ok) return;
+  const me = await response.json();
+  state.username = typeof me.username === "string" ? me.username : "";
+  state.role = me.role === "admin" ? "admin" : "";
+  if (booted) render();
 }
 
 async function persist(hero) {

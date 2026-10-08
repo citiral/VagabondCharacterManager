@@ -10,7 +10,6 @@ export function env(name: string): string | undefined {
 }
 
 export async function loadLocalEnv(root: string) {
-  if (env("DATABASE_URL")) return;
   try {
     const text = await Deno.readTextFile(`${root}/.env`);
     for (const line of text.split(/\r?\n/)) {

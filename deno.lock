@@ -1,7 +1,13 @@
 {
   "version": "5",
   "specifiers": {
+    "jsr:@std/crypto@*": "1.1.0",
     "npm:pg@*": "8.23.0"
+  },
+  "jsr": {
+    "@std/crypto@1.1.0": {
+      "integrity": "b8d6d0a6377a32b213af2661ed7bf1062d94feac0c57def5526a8e74a95c3ec8"
+    }
   },
   "npm": {
     "pg-cloudflare@1.4.0": {

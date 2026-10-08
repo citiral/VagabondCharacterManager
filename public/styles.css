@@ -80,6 +80,8 @@ h1, h2, h3, .brand, .kicker, .tab, .stat b, .dc { font-family: Cinzel, "Times Ne
 .bar { height: 4px; margin-top: 8px; background: rgba(255, 255, 255, 0.12); }
 .bar i { display: block; height: 100%; background: #c45a4a; }
 .side-foot { margin-top: 18px; display: flex; gap: 8px; flex-wrap: wrap; }
+.signed-in { margin: 0 0 14px; color: #e0b56a; }
+.hidden { display: none !important; }
 .hint { color: #b5a48e; font-size: 0.85rem; line-height: 1.45; }
 
 .stage { padding: 18px 22px 28px; min-width: 0; max-width: 100%; }
@@ -511,3 +513,51 @@ ol.steps li { margin: 6px 0; }
   .stage { padding: 0; }
   .sheet { box-shadow: none; }
 }
+
+body.gate { overflow: auto; }
+.gate-wrap {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 32px 16px;
+}
+.gate-card {
+  width: min(440px, 100%);
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  padding: 28px 26px 24px;
+  box-shadow: var(--shadow);
+}
+.gate-card.wide { width: min(680px, 100%); }
+.gate-card h1 { margin: 0 0 14px; }
+.gate-card h2 { font-size: 1rem; margin: 18px 0 8px; }
+.gate-card p { margin: 0 0 14px; }
+.gate-card > form { display: flex; flex-direction: column; gap: 12px; }
+.gate-card > form .primary { width: 100%; }
+.gate-card input[type="email"],
+.gate-card input[type="password"] {
+  width: 100%;
+  background: #fffdf8;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  padding: 8px 10px;
+}
+.gate-links { margin-top: 16px; }
+.gate-links a { color: var(--oxblood); }
+.gate-msg.note { color: var(--ink-soft); }
+.gate-msg.error { color: var(--danger); }
+.review { list-style: none; margin: 0 0 8px; padding: 0; }
+.review li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+.review small { display: block; color: var(--ink-soft); }
+.review-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.review-actions form { margin: 0; }
+a.ghost { display: inline-block; text-decoration: none; }
+
