@@ -20,7 +20,7 @@ export function layout(hero, sheet) {
           <button class="primary" data-act="new">New hero</button>
           <button class="ghost" data-act="party">${state.party ? "Back to sheet" : "Whole table"}</button>
         </div>
-        <div class="hero-list">${state.heroes.map(card).join("") || `<p class="hint">No heroes yet.</p>`}</div>
+        <div class="hero-list">${listedHeroes().map(card).join("") || `<p class="hint">No heroes yet.</p>`}</div>
         <div class="side-foot">
           <button class="ghost" data-act="export-all">Export party</button>
           <button class="ghost" data-act="import">Import</button>
@@ -52,6 +52,16 @@ export function layout(hero, sheet) {
 
 function label(tab) {
   return { record: "Record", build: "Build", gear: "Gear", magic: "Magic" }[tab];
+}
+
+function listedHeroes() {
+  const mine = [];
+  const rest = [];
+  for (const hero of state.heroes) {
+    if (state.userId && hero.ownerId === state.userId) mine.push(hero);
+    else rest.push(hero);
+  }
+  return mine.concat(rest);
 }
 
 function ownerTag(hero) {
