@@ -2,7 +2,7 @@
 // when the socket is down.
 
 import { normalize } from "./engine.js";
-import { app, current, hydrate, state } from "./state.js";
+import { app, canEdit, current, hydrate, state } from "./state.js";
 import { render } from "./ui/render.js";
 
 const outbound = new Map();
@@ -43,10 +43,11 @@ function applyRemoteUpsert(raw) {
   const local = index >= 0 ? state.heroes[index] : null;
   const active = document.activeElement;
   const field = active?.dataset?.field;
-  if (local && field && state.id === incoming.id) incoming[field] = local[field];
+  if (local && field && state.id === incoming.id && canEdit(incoming)) incoming[field] = local[field];
   if (index >= 0) state.heroes[index] = incoming;
   else state.heroes.push(incoming);
-  if (outbound.has(incoming.id)) outbound.set(incoming.id, incoming);
+  if (state.userId && !canEdit(incoming)) outbound.delete(incoming.id);
+  else if (outbound.has(incoming.id)) outbound.set(incoming.id, incoming);
   render();
 }
 
@@ -92,7 +93,8 @@ function connect() {
     if (message.type === "error") {
       state.error = message.error || "The live update was rejected.";
       state.saving = "Not saved";
-      render();
+      if (message.hero) applyRemoteUpsert(message.hero);
+      else render();
     }
   };
   next.onclose = () => {
@@ -132,6 +134,7 @@ function flushOutbound() {
 }
 
 export function scheduleSave(hero, immediate = false) {
+  if (!canEdit(hero)) return;
   // Keystrokes wait a beat. Purchases and level-ups pass immediate and send now.
   outbound.set(hero.id, hero);
   state.saving = live ? "Live" : "Saving…";
@@ -146,12 +149,16 @@ export function scheduleSave(hero, immediate = false) {
 export async function load() {
   app.innerHTML = `<p class="banner">Connecting…</p>`;
   connect();
-  loadAccount();
+  const accountReady = loadAccount();
   const liveBoot = await Promise.race([
     bootPromise.then(() => true),
     new Promise((resolve) => setTimeout(() => resolve(false), 2500)),
   ]);
-  if (liveBoot) return;
+  await accountReady;
+  if (liveBoot) {
+    render();
+    return;
+  }
   const response = await fetch("/api/heroes");
   if (!response.ok) throw new Error("Could not load the party");
   if (booted) return;
@@ -166,9 +173,9 @@ async function loadAccount() {
   const response = await fetch("/api/me");
   if (!response.ok) return;
   const me = await response.json();
+  state.userId = typeof me.id === "string" ? me.id : "";
   state.username = typeof me.username === "string" ? me.username : "";
   state.role = me.role === "admin" ? "admin" : "";
-  if (booted) render();
 }
 
 async function persist(hero) {
@@ -178,8 +185,16 @@ async function persist(hero) {
     headers: { "content-type": "application/json" },
     body: JSON.stringify(hero),
   });
-  state.saving = response.ok ? (live ? "Live" : "Saved") : "Not saved";
-  state.error = response.ok ? "" : "The sheet didn't save. Keep this tab open and try again.";
+  const body = await response.json().catch(() => null);
+  if (!response.ok) {
+    state.saving = "Not saved";
+    state.error = body?.error || "The sheet didn't save. Keep this tab open and try again.";
+    if (body?.hero) applyRemoteUpsert(body.hero);
+    else paintSave();
+    return;
+  }
+  state.saving = live ? "Live" : "Saved";
+  state.error = "";
   paintSave();
 }
 

@@ -50,17 +50,17 @@ export async function handleRequest(
     return redirect("/username");
   }
 
-  const { ensureParty, publish, persistNow, forget } = party;
+  const { ensureParty, edit, persistNow, claim, release, forget } = party;
 
   if (path === "/api/live") {
     if (request.headers.get("upgrade")?.toLowerCase() !== "websocket") return json({ error: "Expected websocket" }, 426);
-    return liveSocket(request, party);
+    return liveSocket(request, party, user);
   }
 
   try {
     if (path === "/api/heroes" && request.method === "GET") return json(await ensureParty());
 
-    if (path === "/api/me" && request.method === "GET") return json({ username: user.username, role: user.role });
+    if (path === "/api/me" && request.method === "GET") return json({ id: user.id, username: user.username, role: user.role });
 
     if (path === "/api/heroes" && request.method === "POST") {
       const body = await request.json().catch(() => null);
@@ -68,7 +68,16 @@ export async function handleRequest(
       if (!HERO_ID.test(String(hero.id || ""))) hero.id = crypto.randomUUID();
       hero.createdAt = hero.createdAt || Date.now();
       if (snapshot(hero).length > MAX_HERO_BYTES) return json({ error: "That hero is too large to save." }, 413);
-      return json(await persistNow(hero), 201);
+      return outcome(await persistNow(hero, user), 201);
+    }
+
+    const ownership = path.match(/^\/api\/heroes\/([^/]+)\/(claim|release)$/);
+    if (ownership) {
+      if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
+      const id = decodeURIComponent(ownership[1]);
+      if (!HERO_ID.test(id)) return json({ error: "Bad id" }, 400);
+      const result = ownership[2] === "claim" ? await claim(id, user) : await release(id, user.id);
+      return outcome(result);
     }
 
     const match = path.match(/^\/api\/heroes\/([^/]+)$/);
@@ -84,11 +93,13 @@ export async function handleRequest(
         const hero = asHero(await request.json().catch(() => null));
         if (!hero || hero.id !== id) return json({ error: "Bad hero" }, 400);
         if (snapshot(hero).length > MAX_HERO_BYTES) return json({ error: "That hero is too large to save." }, 413);
-        if (request.headers.get("x-immediate") === "1") return json(await persistNow(hero));
-        return json(publish(hero) ?? hero);
+        if (request.headers.get("x-immediate") === "1") return outcome(await persistNow(hero, user));
+        await ensureParty();
+        return outcome(edit(hero, user));
       }
       if (request.method === "DELETE") {
-        await forget(id);
+        const result = await forget(id, user.id);
+        if ("error" in result) return json({ error: result.error }, result.status);
         return json({ ok: true });
       }
     }
@@ -199,6 +210,11 @@ async function review(request: Request, path: string, accounts: AccountStore) {
   }
   if (path !== "/admin" || request.method !== "GET") return html(notFoundPage(), 404);
   return html(adminPage(await accounts.listReview()));
+}
+
+function outcome(result: { hero: { id: string } } | { error: string; status: number; hero?: unknown }, okStatus = 200) {
+  if ("error" in result) return json({ error: result.error, hero: result.hero ?? null }, result.status);
+  return json(result.hero, okStatus);
 }
 
 function redirect(location: string, cookie?: string) {

@@ -19,7 +19,6 @@ export function record(hero, sheet) {
           <p class="kicker">Hero record</p>
           <input id="hero-name" class="name-input" data-field="name" data-render="1" placeholder="What are they called?" value="${esc(hero.name)}">
           <div class="identity">
-            <input id="hero-player" data-field="player" data-render="1" placeholder="Player" value="${esc(hero.player)}">
             <input id="hero-concept" data-field="concept" placeholder="A line of concept" value="${esc(hero.concept)}">
           </div>
         </div>
@@ -114,7 +113,7 @@ export function record(hero, sheet) {
         </div>
         <h2 style="margin-top:14px">End of session</h2>
         ${QUESTIONS.map((q, i) => `<label class="check"><input type="checkbox" data-act="question" data-i="${i}" ${state.qs[i] ? "checked" : ""}> ${esc(q)}</label>`).join("")}
-        <button class="ghost" data-act="award">Award ${state.qs.filter(Boolean).length} XP to the whole party</button>
+        <button class="ghost" data-act="award">Award ${state.qs.filter(Boolean).length} XP to your heroes</button>
       </section>
     </article>`;
 }

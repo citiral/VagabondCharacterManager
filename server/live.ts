@@ -4,9 +4,9 @@
 import type { Party } from "./party.ts";
 import { asHero, HERO_ID, MAX_HERO_BYTES, snapshot } from "./store.ts";
 
-export function liveSocket(request: Request, party: Party) {
+export function liveSocket(request: Request, party: Party, user: { id: string; username: string }) {
   const { socket, response } = Deno.upgradeWebSocket(request);
-  const { sockets, ensureParty, publish, forget, enqueueFlush } = party;
+  const { sockets, ensureParty, edit, forget, enqueueFlush } = party;
   sockets.add(socket);
   socket.onopen = () => {
     ensureParty()
@@ -37,7 +37,14 @@ export function liveSocket(request: Request, party: Party) {
     if (message.type === "delete") {
       const id = String(message.id || "");
       if (!HERO_ID.test(id)) return;
-      forget(id, socket).catch((error) => console.error(error));
+      ensureParty()
+        .then(() => forget(id, user.id, socket))
+        .then((result) => {
+          if ("error" in result && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({ type: "error", error: result.error }));
+          }
+        })
+        .catch((error) => console.error(error));
       return;
     }
     if (message.type !== "upsert") return;
@@ -47,7 +54,14 @@ export function liveSocket(request: Request, party: Party) {
       socket.send(JSON.stringify({ type: "error", error: "That hero is too large to save." }));
       return;
     }
-    publish(hero, socket);
+    ensureParty()
+      .then(() => edit(hero, user, socket))
+      .then((result) => {
+        if ("error" in result && socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({ type: "error", error: result.error, hero: result.hero ?? null }));
+        }
+      })
+      .catch((error) => console.error(error));
   };
   socket.onclose = () => {
     sockets.delete(socket);

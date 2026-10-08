@@ -18,6 +18,7 @@ export const state = {
   trayMin: trayStartsMin(),
   log: [],
   saving: "Connecting…",
+  userId: "",
   username: "",
   role: "",
   error: "",
@@ -44,6 +45,30 @@ export const app = document.querySelector("#app");
 
 export function current() {
   return state.heroes.find((hero) => hero.id === state.id) || null;
+}
+
+// Rolls, filters, and making your own copy stay available on someone else's sheet.
+export const OPEN_ACTS = new Set([
+  "duplicate",
+  "export-one",
+  "export-pdf",
+  "award",
+  "roll-skill",
+  "roll-save",
+  "roll-weapon",
+  "roll-unarmed",
+  "question",
+  "loot",
+  "gear-cat",
+  "spell-filter",
+  "spell-type",
+  "cast-spell",
+  "cast-delivery",
+  "cast-effect",
+]);
+
+export function canEdit(hero = current()) {
+  return !!hero && !!state.userId && hero.ownerId === state.userId;
 }
 
 export function hydrate(raw) {

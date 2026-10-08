@@ -183,3 +183,169 @@ Deno.test("an account without a username chooses one before the sheet", async ()
     await Deno.remove(dir, { recursive: true });
   }
 });
+
+Deno.test("an older hero table can be claimed", async () => {
+  const dir = await Deno.makeTempDir();
+  const { DatabaseSync } = await import("node:sqlite");
+  const db = new DatabaseSync(`${dir}/vagabond.sqlite`);
+  db.exec(`CREATE TABLE heroes (
+    id text PRIMARY KEY,
+    name text NOT NULL DEFAULT '',
+    document text NOT NULL,
+    updated_at integer NOT NULL
+  )`);
+  const id = crypto.randomUUID();
+  db.prepare(`INSERT INTO heroes (id, name, document, updated_at) VALUES (?, ?, ?, ?)`).run(
+    id,
+    "Old",
+    JSON.stringify({ id, name: "Old", notes: "from before accounts" }),
+    Date.now(),
+  );
+  db.close();
+  const { heroes, accounts } = await openSqlite(dir);
+  try {
+    const ownerId = crypto.randomUUID();
+    await accounts.create({
+      id: ownerId,
+      email: "keeper@example.com",
+      username: "Keeper",
+      passwordHash: await hashPassword(password),
+      status: "approved",
+      role: "user",
+      createdAt: Date.now(),
+    });
+    const listed = await heroes.list();
+    const sheet = listed[0] as { ownerId?: string | null; notes?: string };
+    if (listed.length !== 1 || sheet?.ownerId || sheet?.notes !== "from before accounts") {
+      throw new Error("expected the old hero to stay unclaimed");
+    }
+    if (!await heroes.claim(id, ownerId)) throw new Error("expected claim");
+    const claimed = await heroes.list();
+    if (claimed[0].ownerId !== ownerId || claimed[0].ownerName !== "Keeper") throw new Error("expected the claim to stick");
+    if (await heroes.claim(id, crypto.randomUUID())) throw new Error("expected a second claim to fail");
+    if (!await heroes.release(id, ownerId)) throw new Error("expected release");
+    if ((await heroes.list())[0].ownerId) throw new Error("expected release to clear the owner");
+  } finally {
+    await heroes.close();
+    await Deno.remove(dir, { recursive: true });
+  }
+});
+
+Deno.test("only the owner can edit a hero, and an unclaimed hero can be claimed", async () => {
+  const dir = await Deno.makeTempDir();
+  const { heroes, accounts } = await openSqlite(dir);
+  const party = createParty(heroes);
+  const auth = { secret, adminEmail };
+  const publicDir = `${import.meta.dirname}/public`;
+  const send = (path: string, init: RequestInit = {}) =>
+    handleRequest(new Request(`http://localhost${path}`, init), party, accounts, auth, publicDir);
+
+  const strayId = crypto.randomUUID();
+
+  try {
+    await heroes.upsert([{
+      id: strayId,
+      name: "Stray",
+      json: JSON.stringify({ id: strayId, name: "Stray", notes: "found on the road" }),
+      updatedAt: Date.now(),
+      ownerId: null,
+    }]);
+    await accounts.create({
+      id: crypto.randomUUID(),
+      email: friendEmail,
+      username: "Friend",
+      passwordHash: await hashPassword(password),
+      status: "approved",
+      role: "user",
+      createdAt: Date.now(),
+    });
+    const admin = await send("/register", {
+      method: "POST",
+      body: new URLSearchParams({ username: "Me", email: adminEmail, password }),
+    });
+    const adminToken = admin.headers.get("set-cookie")?.match(/^auth=([^;]*)/)?.[1] ?? "";
+    const friend = await send("/login", {
+      method: "POST",
+      body: new URLSearchParams({ email: friendEmail, password }),
+    });
+    const friendToken = friend.headers.get("set-cookie")?.match(/^auth=([^;]*)/)?.[1] ?? "";
+    const friendAccount = await accounts.findByEmail(friendEmail);
+    const adminAccount = await accounts.findByEmail(adminEmail);
+    if (!friendAccount || !adminAccount || !friendToken || !adminToken) throw new Error("expected both accounts to sign in");
+
+    const as = (token: string, method: string, body?: unknown) => ({
+      method,
+      headers: { cookie: `auth=${token}`, "content-type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+
+    const created = await send("/api/heroes", as(friendToken, "POST", { name: "Briar", notes: "carries a lamp" }));
+    const briar = await created.json();
+    if (created.status !== 201 || briar.ownerId !== friendAccount.id || briar.ownerName !== "Friend" || briar.notes !== "carries a lamp") {
+      throw new Error("expected a new hero to belong to its creator");
+    }
+
+    const { DatabaseSync } = await import("node:sqlite");
+    const db = new DatabaseSync(`${dir}/vagabond.sqlite`);
+    const stored = db.prepare(`SELECT document, owner_id FROM heroes WHERE id = ?`).get(briar.id) as { document: string; owner_id: string };
+    db.close();
+    if (stored.owner_id !== friendAccount.id || stored.document.includes("ownerId")) {
+      throw new Error("expected ownership to stay out of the sheet");
+    }
+
+    const seen = await send(`/api/heroes/${briar.id}`, as(adminToken, "GET"));
+    const viewed = await seen.json();
+    if (seen.status !== 200 || viewed.notes !== "carries a lamp" || viewed.ownerName !== "Friend") {
+      throw new Error("expected another player to see the same sheet");
+    }
+
+    const stolen = await send(`/api/heroes/${briar.id}`, as(adminToken, "PUT", { ...viewed, notes: "rewritten", ownerId: adminAccount.id }));
+    if (stolen.status !== 403) throw new Error("expected another player to be refused");
+    const afterSteal = await (await send(`/api/heroes/${briar.id}`, as(friendToken, "GET"))).json();
+    if (afterSteal.notes !== "carries a lamp" || afterSteal.ownerId !== friendAccount.id) {
+      throw new Error("expected a refused edit to leave the hero alone");
+    }
+
+    const removed = await send(`/api/heroes/${briar.id}`, as(adminToken, "DELETE"));
+    if (removed.status !== 403) throw new Error("expected another player to be refused a delete");
+
+    const kept = await send(`/api/heroes/${briar.id}`, as(friendToken, "PUT", { ...afterSteal, notes: "lamp trimmed" }));
+    const trimmed = await kept.json();
+    if (kept.status !== 200 || trimmed.notes !== "lamp trimmed" || trimmed.ownerId !== friendAccount.id) {
+      throw new Error("expected the owner to save");
+    }
+
+    const strayEdit = await send(`/api/heroes/${strayId}`, as(friendToken, "PUT", { id: strayId, name: "Stray", notes: "taken without claiming" }));
+    if (strayEdit.status !== 403 || !(await strayEdit.json()).error.includes("Claim")) {
+      throw new Error("expected an unclaimed hero to be read-only");
+    }
+    const strayDelete = await send(`/api/heroes/${strayId}`, as(adminToken, "DELETE"));
+    if (strayDelete.status !== 403) throw new Error("expected an unclaimed hero to stay until it is claimed");
+
+    const tooSoon = await send(`/api/heroes/${briar.id}/claim`, as(adminToken, "POST"));
+    if (tooSoon.status !== 409) throw new Error("expected a claimed hero to refuse a second owner");
+    const released = await send(`/api/heroes/${briar.id}/release`, as(friendToken, "POST"));
+    const free = await released.json();
+    if (released.status !== 200 || free.ownerId !== null) throw new Error("expected release to clear the owner");
+    const reclaimed = await send(`/api/heroes/${briar.id}/claim`, as(adminToken, "POST"));
+    const mine = await reclaimed.json();
+    if (reclaimed.status !== 200 || mine.ownerId !== adminAccount.id || mine.ownerName !== "Me" || mine.notes !== "lamp trimmed") {
+      throw new Error("expected release to let someone else claim the same sheet");
+    }
+    const lockedOut = await send(`/api/heroes/${briar.id}`, as(friendToken, "PUT", { ...mine, notes: "nope" }));
+    if (lockedOut.status !== 403) throw new Error("expected the previous owner to lose edit access");
+
+    const strayClaim = await send(`/api/heroes/${strayId}/claim`, as(friendToken, "POST"));
+    const stray = await strayClaim.json();
+    if (strayClaim.status !== 200 || stray.ownerId !== friendAccount.id || stray.notes !== "found on the road") {
+      throw new Error("expected an old hero to be claimable");
+    }
+    const dropped = await send(`/api/heroes/${strayId}`, as(friendToken, "DELETE"));
+    if (dropped.status !== 200) throw new Error("expected the owner to delete");
+    const gone = await send(`/api/heroes/${strayId}`, as(adminToken, "GET"));
+    if (gone.status !== 404) throw new Error("expected the deleted hero to be gone");
+  } finally {
+    await party.shutdown();
+    await Deno.remove(dir, { recursive: true });
+  }
+});

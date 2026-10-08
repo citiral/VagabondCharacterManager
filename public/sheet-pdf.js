@@ -178,7 +178,6 @@ function weaponProps(item, code) {
 
 function abilityLines(hero, sheet) {
   const lines = [];
-  if (hero.player) lines.push(`Player: ${hero.player}`);
   if (hero.concept) lines.push(hero.concept);
   const featureNames = sheet.features.map((feature) => feature.name.toLowerCase());
   const extraTags = sheet.tags.filter((tag) => {
@@ -337,7 +336,7 @@ export async function heroRecordBytes(hero, template) {
 
   const title = hero.name ? `${hero.name} hero record` : "Vagabond hero record";
   pdfDoc.setTitle(pdfText(title));
-  if (hero.player) pdfDoc.setAuthor(pdfText(hero.player));
+  if (hero.ownerName) pdfDoc.setAuthor(pdfText(hero.ownerName));
 
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   for (const field of form.getFields()) {

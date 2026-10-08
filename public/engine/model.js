@@ -23,7 +23,6 @@ export function blankHero() {
   return {
     id: crypto.randomUUID(),
     name: "",
-    player: "",
     concept: "",
     notes: "",
     level: 1,
@@ -185,6 +184,7 @@ export function normalize(hero) {
   if (hero.mana != null) hero.mana = Math.max(0, Math.trunc(Number(hero.mana)));
   if (hero.luck != null) hero.luck = Math.max(0, Math.trunc(Number(hero.luck)));
   hero.conditions = hero.conditions || [];
+  delete hero.player;
   return hero;
 }
 

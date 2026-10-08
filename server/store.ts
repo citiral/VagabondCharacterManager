@@ -9,13 +9,18 @@ export type HeroRecord = {
   name?: string;
   createdAt?: number;
   updatedAt?: number;
+  // Carried on the live hero, never inside the saved sheet. Null means unclaimed.
+  ownerId?: string | null;
+  ownerName?: string;
 };
 
-export type HeroRow = { id: string; name: string; json: string; updatedAt: number };
+export type HeroRow = { id: string; name: string; json: string; updatedAt: number; ownerId: string | null };
 
 export type HeroStore = {
   list(): Promise<HeroRecord[]>;
   upsert(rows: HeroRow[]): Promise<void>;
+  claim(id: string, ownerId: string): Promise<boolean>;
+  release(id: string, ownerId: string): Promise<boolean>;
   remove(id: string): Promise<void>;
   close(): Promise<void>;
 };
@@ -62,7 +67,12 @@ export function asHero(value: unknown): HeroRecord | null {
 }
 
 export function snapshot(hero: HeroRecord) {
-  return JSON.stringify(hero);
+  // Ownership lives in its own column, so a save can't grant it by editing the sheet.
+  if (!("ownerId" in hero) && !("ownerName" in hero)) return JSON.stringify(hero);
+  const copy: HeroRecord = { ...hero };
+  delete copy.ownerId;
+  delete copy.ownerName;
+  return JSON.stringify(copy);
 }
 
 function readDocument(value: unknown): HeroRecord | null {
@@ -89,9 +99,11 @@ export async function openPostgres(url: string): Promise<Stores> {
       id text PRIMARY KEY,
       name text NOT NULL DEFAULT '',
       document jsonb NOT NULL,
-      updated_at bigint NOT NULL
+      updated_at bigint NOT NULL,
+      owner_id text
     )
   `);
+  await pool.query(`ALTER TABLE heroes ADD COLUMN IF NOT EXISTS owner_id text`);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
       id text PRIMARY KEY,
@@ -172,25 +184,50 @@ export async function openPostgres(url: string): Promise<Stores> {
     accounts,
     heroes: {
     async list() {
-      const result = await pool.query(`SELECT document FROM heroes ORDER BY name`);
-      return result.rows.flatMap((row: { document: unknown }) => {
+      const result = await pool.query(
+        `SELECT h.document, h.owner_id, COALESCE(u.username, '') AS owner_name
+         FROM heroes h
+         LEFT JOIN users u ON u.id = h.owner_id
+         ORDER BY h.name`,
+      );
+      return result.rows.flatMap((row: { document: unknown; owner_id: unknown; owner_name: unknown }) => {
         const hero = readDocument(row.document);
-        return hero ? [hero] : [];
+        return hero ? [attachOwner(hero, row.owner_id, row.owner_name)] : [];
       });
     },
     async upsert(rows) {
       if (!rows.length) return;
       await pool.query(
-        `INSERT INTO heroes (id, name, document, updated_at)
-         SELECT id, name, document::jsonb, updated_at
-         FROM unnest($1::text[], $2::text[], $3::text[], $4::bigint[])
-           AS t(id, name, document, updated_at)
+        `INSERT INTO heroes (id, name, document, updated_at, owner_id)
+         SELECT id, name, document::jsonb, updated_at, NULLIF(owner_id, '')
+         FROM unnest($1::text[], $2::text[], $3::text[], $4::bigint[], $5::text[])
+           AS t(id, name, document, updated_at, owner_id)
          ON CONFLICT (id) DO UPDATE
          SET name = EXCLUDED.name,
              document = EXCLUDED.document,
              updated_at = EXCLUDED.updated_at`,
-        [rows.map((row) => row.id), rows.map((row) => row.name), rows.map((row) => row.json), rows.map((row) => row.updatedAt)],
+        [
+          rows.map((row) => row.id),
+          rows.map((row) => row.name),
+          rows.map((row) => row.json),
+          rows.map((row) => row.updatedAt),
+          rows.map((row) => row.ownerId ?? ""),
+        ],
       );
+    },
+    async claim(id, ownerId) {
+      const result = await pool.query(
+        `UPDATE heroes SET owner_id = $1 WHERE id = $2 AND owner_id IS NULL`,
+        [ownerId, id],
+      );
+      return (result.rowCount ?? 0) > 0;
+    },
+    async release(id, ownerId) {
+      const result = await pool.query(
+        `UPDATE heroes SET owner_id = NULL WHERE id = $1 AND owner_id = $2`,
+        [id, ownerId],
+      );
+      return (result.rowCount ?? 0) > 0;
     },
     async remove(id) {
       await pool.query(`DELETE FROM heroes WHERE id = $1`, [id]);
@@ -213,9 +250,13 @@ export async function openSqlite(dir: string): Promise<Stores> {
       id text PRIMARY KEY,
       name text NOT NULL DEFAULT '',
       document text NOT NULL,
-      updated_at integer NOT NULL
+      updated_at integer NOT NULL,
+      owner_id text
     )
   `);
+  if (!sqliteColumn(db, "heroes", "owner_id")) {
+    db.exec(`ALTER TABLE heroes ADD COLUMN owner_id text`);
+  }
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id text PRIMARY KEY,
@@ -232,15 +273,22 @@ export async function openSqlite(dir: string): Promise<Stores> {
   }
   db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS users_username_lower ON users (lower(username)) WHERE username <> ''`);
   const upsertOne = db.prepare(
-    `INSERT INTO heroes (id, name, document, updated_at)
-     VALUES (?, ?, ?, ?)
+    `INSERT INTO heroes (id, name, document, updated_at, owner_id)
+     VALUES (?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET
        name = excluded.name,
        document = excluded.document,
        updated_at = excluded.updated_at`,
   );
+  const claimOne = db.prepare(`UPDATE heroes SET owner_id = ? WHERE id = ? AND owner_id IS NULL`);
+  const releaseOne = db.prepare(`UPDATE heroes SET owner_id = NULL WHERE id = ? AND owner_id = ?`);
   const removeOne = db.prepare(`DELETE FROM heroes WHERE id = ?`);
-  const listAll = db.prepare(`SELECT document FROM heroes ORDER BY name`);
+  const listAll = db.prepare(
+    `SELECT h.document, h.owner_id, COALESCE(u.username, '') AS owner_name
+     FROM heroes h
+     LEFT JOIN users u ON u.id = h.owner_id
+     ORDER BY h.name`,
+  );
   const userColumns = `id, email, username, password_hash, status, role, created_at`;
   const findEmail = db.prepare(`SELECT ${userColumns} FROM users WHERE email = ?`);
   const findId = db.prepare(`SELECT ${userColumns} FROM users WHERE id = ?`);
@@ -297,21 +345,30 @@ export async function openSqlite(dir: string): Promise<Stores> {
     heroes: {
     list() {
       return Promise.resolve(listAll.all().flatMap((row) => {
-        const hero = readDocument((row as { document: unknown }).document);
-        return hero ? [hero] : [];
+        const listed = row as { document: unknown; owner_id: unknown; owner_name: unknown };
+        const hero = readDocument(listed.document);
+        return hero ? [attachOwner(hero, listed.owner_id, listed.owner_name)] : [];
       }));
     },
     upsert(rows) {
       if (!rows.length) return Promise.resolve();
       db.exec("BEGIN");
       try {
-        for (const row of rows) upsertOne.run(row.id, row.name, row.json, row.updatedAt);
+        for (const row of rows) upsertOne.run(row.id, row.name, row.json, row.updatedAt, row.ownerId);
         db.exec("COMMIT");
       } catch (error) {
         db.exec("ROLLBACK");
         return Promise.reject(error);
       }
       return Promise.resolve();
+    },
+    claim(id, ownerId) {
+      const result = claimOne.run(ownerId, id) as { changes?: number };
+      return Promise.resolve((result.changes ?? 0) > 0);
+    },
+    release(id, ownerId) {
+      const result = releaseOne.run(id, ownerId) as { changes?: number };
+      return Promise.resolve((result.changes ?? 0) > 0);
     },
     remove(id) {
       removeOne.run(id);
@@ -323,6 +380,12 @@ export async function openSqlite(dir: string): Promise<Stores> {
     },
   },
   };
+}
+
+function attachOwner(hero: HeroRecord, ownerId: unknown, ownerName: unknown): HeroRecord {
+  hero.ownerId = typeof ownerId === "string" && ownerId ? ownerId : null;
+  hero.ownerName = hero.ownerId && typeof ownerName === "string" ? ownerName : "";
+  return hero;
 }
 
 function readAccount(row: UserRow | undefined): Account | null {

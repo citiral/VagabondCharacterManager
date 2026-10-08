@@ -98,6 +98,21 @@ h1, h2, h3, .brand, .kicker, .tab, .stat b, .dc { font-family: Cinzel, "Times Ne
 }
 .tab.on { background: var(--paper); color: var(--ink); }
 .save-state { color: #cbbba4; font-size: 0.85rem; min-width: 7rem; text-align: right; }
+.ownership {
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  background: rgba(224, 181, 106, 0.12);
+  border: 1px solid rgba(224, 181, 106, 0.35);
+  color: #f3ead8;
+}
+.sheet input:disabled,
+.sheet textarea:disabled,
+.sheet select:disabled {
+  opacity: 1;
+  color: var(--ink);
+  -webkit-text-fill-color: var(--ink);
+  cursor: default;
+}
 .banner, .warn {
   background: #f3d6c8;
   color: #5c241c;
@@ -134,6 +149,7 @@ h1, h2, h3, .brand, .kicker, .tab, .stat b, .dc { font-family: Cinzel, "Times Ne
 .name-input::placeholder { color: #b3a28c; }
 .identity { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
 .identity input, .slim {
+  width: min(100%, 640px);
   background: transparent;
   border: 0;
   border-bottom: 1px solid var(--line);

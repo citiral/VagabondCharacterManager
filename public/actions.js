@@ -26,7 +26,7 @@ import {
   trainingBudget,
   xpToLevel,
 } from "./engine.js";
-import { current, hydrate, state } from "./state.js";
+import { canEdit, current, hydrate, OPEN_ACTS, state } from "./state.js";
 import { commit, removeRemote, scheduleSave } from "./sync.js";
 import { render } from "./ui/render.js";
 
@@ -68,7 +68,7 @@ document.addEventListener("input", (event) => {
     return;
   }
   const hero = current();
-  if (!hero || !el.dataset.field) return;
+  if (!hero || !el.dataset.field || !canEdit(hero)) return;
   writeField(hero, el.dataset.field, el.value);
   scheduleSave(hero);
   if (el.dataset.render) render();
@@ -82,7 +82,7 @@ document.addEventListener("change", (event) => {
     return;
   }
   const hero = current();
-  if (!hero || !el.dataset.field) return;
+  if (!hero || !el.dataset.field || !canEdit(hero)) return;
   writeField(hero, el.dataset.field, el.value);
   commit(hero);
 });
@@ -94,7 +94,7 @@ document.addEventListener("click", (event) => {
 });
 
 function writeField(hero, field, value) {
-  if (["name", "player", "concept", "notes"].includes(field)) hero[field] = value;
+  if (["name", "concept", "notes"].includes(field)) hero[field] = value;
   else if (field === "wealth") hero.wealth = parseMoney(value);
   else if (field === "hp") hero.hp = Math.max(0, Math.trunc(Number(value) || 0));
   else if (field === "mana") hero.mana = Math.max(0, Math.trunc(Number(value) || 0));
@@ -133,6 +133,9 @@ function onAct(el) {
   if (act === "cast-delivery") { state.delivery = el.value; render(); return; }
   if (act === "cast-effect") { state.effect = el.checked; render(); return; }
   if (!hero) return;
+  if (act === "claim") return claimHero(hero);
+  if (act === "release") return releaseHero(hero);
+  if (!canEdit(hero) && !OPEN_ACTS.has(act)) return;
 
   if (act === "ancestry") hero.ancestry = el.value;
   else if (act === "class") hero.classId = el.value;
@@ -317,7 +320,9 @@ function breather(hero) {
 function award() {
   const gain = state.qs.filter(Boolean).length;
   if (!gain) return;
-  for (const hero of state.heroes) {
+  const mine = state.heroes.filter((hero) => canEdit(hero));
+  if (!mine.length) return;
+  for (const hero of mine) {
     hero.xp += gain;
     scheduleSave(hero, true);
   }
@@ -365,7 +370,44 @@ function pushAndRender(entry) {
 }
 
 // Heroes on the server: create, copy, delete, import, export.
+async function claimHero(hero) {
+  const response = await fetch(`/api/heroes/${hero.id}/claim`, { method: "POST" });
+  const body = await response.json().catch(() => null);
+  if (!response.ok || !body?.id) {
+    if (body?.hero?.id) remember(body.hero);
+    state.error = body?.error || "Couldn't claim this hero.";
+    render();
+    return;
+  }
+  remember(body);
+}
+
+async function releaseHero(hero) {
+  if (!canEdit(hero)) return;
+  const name = hero.name || "this hero";
+  if (!confirm(`Release ${name}? Anyone signed in will be able to claim it.`)) return;
+  const response = await fetch(`/api/heroes/${hero.id}/release`, { method: "POST" });
+  const body = await response.json().catch(() => null);
+  if (!response.ok || !body?.id) {
+    if (body?.hero?.id) remember(body.hero);
+    state.error = body?.error || "Couldn't release this hero.";
+    render();
+    return;
+  }
+  remember(body);
+}
+
+function remember(raw) {
+  const saved = hydrate(raw);
+  const index = state.heroes.findIndex((entry) => entry.id === saved.id);
+  if (index >= 0) state.heroes[index] = saved;
+  else state.heroes.push(saved);
+  state.error = "";
+  render();
+}
+
 async function removeHero(hero) {
+  if (!canEdit(hero)) return;
   if (!confirm(`Delete ${hero.name || "this hero"}?`)) return;
   await removeRemote(hero.id);
   state.heroes = state.heroes.filter((entry) => entry.id !== hero.id);
@@ -431,8 +473,16 @@ async function exportPdf(hero) {
   }
 }
 
+function withoutOwner(hero) {
+  const copy = { ...hero };
+  delete copy.ownerId;
+  delete copy.ownerName;
+  return copy;
+}
+
 function download(filename, data) {
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const clean = Array.isArray(data) ? data.map(withoutOwner) : withoutOwner(data);
+  const blob = new Blob([JSON.stringify(clean, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;

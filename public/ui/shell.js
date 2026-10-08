@@ -2,7 +2,7 @@
 
 import { derive } from "../engine.js";
 import { esc } from "../html.js";
-import { state } from "../state.js";
+import { canEdit, state } from "../state.js";
 import { build } from "./build.js";
 import { gear } from "./gear.js";
 import { magic } from "./magic.js";
@@ -28,7 +28,7 @@ export function layout(hero, sheet) {
           <a class="ghost ${state.role === "admin" ? "" : "hidden"}" href="/admin">Approvals</a>
           <form method="post" action="/logout"><button class="ghost" type="submit">Sign out</button></form>
         </div>
-        <p class="hint">Anyone signed in here shares this party, live. Coin is 1g = 100s = 1000c.</p>
+        <p class="hint">You edit heroes linked to your account. Claim an unclaimed hero to make it yours. Coin is 1g = 100s = 1000c.</p>
       </aside>
       <main class="stage">
         <div class="toolbar no-print">
@@ -38,7 +38,7 @@ export function layout(hero, sheet) {
             ).join("")}
           </div>
           <div class="row">
-            ${hero ? `<button class="ghost" data-act="duplicate">Duplicate</button><button class="ghost" data-act="delete">Delete</button><button class="ghost" data-act="export-pdf">Export PDF</button><button class="ghost" data-act="export-one">Export JSON</button>` : ""}
+            ${heroActions(hero)}
             <div class="save-state">${esc(state.saving)}</div>
           </div>
         </div>
@@ -54,6 +54,26 @@ function label(tab) {
   return { record: "Record", build: "Build", gear: "Gear", magic: "Magic" }[tab];
 }
 
+function ownerTag(hero) {
+  if (!hero.ownerId) return "Unclaimed";
+  if (hero.ownerId === state.userId) return "Yours";
+  return hero.ownerName || "Claimed";
+}
+
+function heroActions(hero) {
+  if (!hero) return "";
+  const claim = hero.ownerId ? "" : `<button class="primary" data-act="claim">Claim</button>`;
+  const release = canEdit(hero) ? `<button class="ghost" data-act="release">Release</button>` : "";
+  const remove = canEdit(hero) ? `<button class="ghost" data-act="delete">Delete</button>` : "";
+  return `${claim}${release}<button class="ghost" data-act="duplicate">Duplicate</button>${remove}<button class="ghost" data-act="export-pdf">Export PDF</button><button class="ghost" data-act="export-one">Export JSON</button>`;
+}
+
+function ownershipNote(hero) {
+  if (!hero.ownerId) return `<p class="ownership">This hero is unclaimed. Claim it to edit the sheet.</p>`;
+  const name = hero.ownerName || "another player";
+  return `<p class="ownership">Read-only. ${esc(name)} is the only one who can edit this hero.</p>`;
+}
+
 function card(hero) {
   const sheet = derive(hero);
   const hp = hero.hp == null ? sheet.effectiveMaxHp : hero.hp;
@@ -62,7 +82,7 @@ function card(hero) {
   return `
     <button class="hero-card ${hero.id === state.id ? "on" : ""}" data-act="select" data-id="${hero.id}">
       <strong>${esc(title)}</strong>
-      <small>${esc(sheet.ancestryName)} ${esc(sheet.className)} · L${sheet.level}${hero.player ? ` · ${esc(hero.player)}` : ""}</small>
+      <small>${esc(sheet.ancestryName)} ${esc(sheet.className)} · L${sheet.level} · ${esc(ownerTag(hero))}</small>
       <div class="bar"><i style="width:${pct}%"></i></div>
     </button>`;
 }
@@ -84,10 +104,12 @@ function welcome() {
 }
 
 function view(hero, sheet) {
-  if (state.tab === "build") return build(hero, sheet);
-  if (state.tab === "gear") return gear(hero, sheet);
-  if (state.tab === "magic") return magic(hero, sheet);
-  return record(hero, sheet);
+  let body = record(hero, sheet);
+  if (state.tab === "build") body = build(hero, sheet);
+  if (state.tab === "gear") body = gear(hero, sheet);
+  if (state.tab === "magic") body = magic(hero, sheet);
+  if (canEdit(hero)) return body;
+  return `<div data-locked="1">${ownershipNote(hero)}${body}</div>`;
 }
 
 function party() {
@@ -100,7 +122,7 @@ function party() {
         const luck = hero.luck == null ? sheet.luckMax : hero.luck;
         return `
           <button class="party-card" data-act="open" data-id="${hero.id}">
-            <p class="kicker">${esc(hero.player || "Hero")}</p>
+            <p class="kicker">${esc(ownerTag(hero))}</p>
             <strong>${esc(hero.name || "Unnamed")}</strong>
             <div>${esc(sheet.ancestryName)} ${esc(sheet.className)} · L${sheet.level}</div>
             <div class="nums">

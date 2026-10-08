@@ -1,7 +1,7 @@
 // Draws the page from state.
 
 import { derive, normalize } from "../engine.js";
-import { app, current, state } from "../state.js";
+import { app, current, OPEN_ACTS, state } from "../state.js";
 import { layout } from "./shell.js";
 
 let shownView = "";
@@ -58,6 +58,17 @@ function restoreScroll(saved) {
   }
 }
 
+function lockSheet() {
+  const root = document.querySelector("[data-locked]");
+  if (!root) return;
+  for (const el of root.querySelectorAll("input, select, textarea, button")) {
+    if (!(el instanceof HTMLElement)) continue;
+    if (el.dataset.ui || el.dataset.uiNum) continue;
+    if (el.dataset.act && OPEN_ACTS.has(el.dataset.act)) continue;
+    if (el.dataset.act || el.dataset.field) el.disabled = true;
+  }
+}
+
 export function render() {
   // The page is one innerHTML swap, so the caret and the scroll position go back afterward.
   const gen = ++renderGen;
@@ -68,6 +79,7 @@ export function render() {
   if (hero) normalize(hero);
   const sheet = hero ? derive(hero) : null;
   app.innerHTML = layout(hero, sheet);
+  lockSheet();
   restoreScroll(saved);
   restoreFocus(snap);
   shownView = nextView;
