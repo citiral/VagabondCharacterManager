@@ -69,7 +69,7 @@ function welcome() {
     <section class="sheet welcome">
       <p class="kicker">Session zero</p>
       <h2>The road is empty.</h2>
-      <p>This is a shared character manager for Vagabond. It builds a hero from the alpha rules, then tracks the numbers you actually touch in play.</p>
+      <p>This is a shared character manager for Vagabond. It builds a hero from the alpha 3 rules, then tracks the numbers you actually touch in play.</p>
       <ol class="steps">
         <li>Ancestry, class, and a stat array.</li>
         <li>Trainings, perks, and spells the class allows.</li>

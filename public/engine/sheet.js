@@ -67,8 +67,8 @@ export function derive(hero) {
   const armorCount = (hero.items || []).filter((item) => item.kind === "armor" && item.equipped).length;
   if (armorCount > 1) warnings.push("Only one set of armor can be worn.");
   let armorPenalty = wornArmor ? (wornArmor.slots || 0) : 0;
-  const lightIgnored = countPerk(hero, "skirmisher") > 0 && wornArmor?.catalogId === "light-armor";
-  if (lightIgnored) armorPenalty = 0;
+  const skirmish = countPerk(hero, "skirmisher");
+  armorPenalty = Math.max(0, armorPenalty - skirmish);
   const armorRating = (wornArmor?.rating || 0) + (hero.ancestry === "draken" ? 1 : 0);
   if (wornArmor && sc.might < (wornArmor.might || 0)) {
     warnings.push(`${wornArmor.name} restrains you until Might is at least ${wornArmor.might}.`);
@@ -78,7 +78,7 @@ export function derive(hero) {
   let bonus = 0;
   if (hero.ancestry === "halfling" || hero.ancestry === "goblin") bonus += 5;
   bonus += countPerk(hero, "treads-lightly") * 5;
-  if (countPerk(hero, "skirmisher") && armorPenalty === 0) bonus += 5;
+  bonus += skirmish * 5;
   if (hero.classId === "barbarian" && level >= 2) bonus += 5 * (1 + Math.floor((level - 2) / 4));
   if (hero.classId === "hunter" && level >= 2) bonus += 5 * (1 + Math.floor((level - 2) / 4));
   const speed = baseSpeed + bonus;

@@ -50,7 +50,9 @@ Deno.test("human fighter sheet math", () => {
   if (d.trainingBudget !== 4) throw new Error("trainings " + d.trainingBudget);
   if (!d.skills.find((s) => s.id === "melee" && s.trained && s.dc === 8)) throw new Error("melee");
   if (!d.skills.find((s) => s.id === "sneak" && !s.trained && s.dc === 15)) throw new Error("sneak");
-  if (d.slots.length !== 3) throw new Error("perks " + d.slots.length);
+  if (d.slots.map((slot) => slot.key).join(",") !== "human,fighter-0,creation") {
+    throw new Error("perks " + d.slots.map((slot) => slot.label).join(", "));
+  }
   if (d.expectedRaises !== 1 || d.spentRaises !== 1) throw new Error("raises");
 });
 
@@ -85,7 +87,7 @@ Deno.test("speed, armor, slots, and fatigue", () => {
   let d = derive(h);
   if (d.speed !== 35 + 5 + 10) throw new Error("speed " + d.speed);
   if (d.armorPenalty !== 1 || d.armorRating !== 1) throw new Error("armor");
-  if (d.slotMax !== 8 + 4 + 2) throw new Error("slots " + d.slotMax);
+  if (d.slotMax !== 8 + 4 + 3) throw new Error("slots " + d.slotMax);
   h.perkChoices["level-3"] = "skirmisher";
   h.trainings = ["finesse"];
   d = derive(normalize(h));
@@ -140,6 +142,12 @@ Deno.test("perk gates", () => {
   });
   const heavy = { id: "heavy-arms", trainedAll: ["melee"], stats: { might: 7 } };
   if (!perkAllowed(h, heavy, "fighter", "fighter-0")) throw new Error("fighter ignores might");
+  const rush = { id: "beat-rush", trainedAll: ["brawl"], stats: { might: 4 } };
+  if (!perkAllowed(h, rush, "fighter", "fighter-0")) throw new Error("fighter can take brawl");
+  const finesse = { id: "deft-hands", trainedAll: ["finesse"], stats: { dexterity: 4 } };
+  if (!perkAllowed(h, finesse, "fighter", "fighter-0")) throw new Error("fighter can take finesse");
+  const dwarf = hero({ classId: "fighter", level: 1, ancestry: "dwarf" });
+  if (derive(dwarf).slots.length !== 2) throw new Error("starting perk " + derive(dwarf).slots.length);
   if (perkAllowed(h, heavy, "normal", "level-3")) throw new Error("normal respects might");
   const book = { id: "bookworm", stats: { reason: 4 }, repeat: true };
   if (!perkAllowed(h, book, "bard", "bard")) throw new Error("bard");

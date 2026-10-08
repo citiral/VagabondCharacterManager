@@ -40,7 +40,7 @@ export function build(hero, sheet) {
         ${STATS.map((stat) => statEditor(hero, stat, sheet)).join("")}
       </div>
       <h2 style="margin-top:16px">Training</h2>
-      <p class="muted">Class and ancestry trainings are locked. You have ${budget} more, from half Reason (rounded up)${hero.ancestry === "human" ? ", the human knack," : ""}${sheet.slots ? "" : ""} plus New Training.</p>
+      <p class="muted">Class and ancestry trainings are locked. You have ${budget} more, from half Reason (rounded up)${hero.ancestry === "human" ? ", human Aptitude," : ""}${sheet.slots ? "" : ""} plus New Training.</p>
       <div class="chips" style="justify-content:flex-start;margin-bottom:8px">
         ${sheet.automaticTrainings.map((id) => `<span class="chip">◆ ${esc(skillName(id))}</span>`).join("") || `<span class="chip">No locked trainings yet</span>`}
       </div>
@@ -51,7 +51,7 @@ export function build(hero, sheet) {
       <h2 style="margin-top:16px">Perks</h2>
       ${sheet.grants.map((grant) => `<div class="feature"><strong>${esc(perkById(grant.id)?.name)}</strong> <small>granted by ${esc(grant.source)}</small><div>${esc(perkById(grant.id)?.summary || "")}</div></div>`).join("")}
       ${sheet.slots.map((slot) => perkSelect(hero, slot)).join("") || `<p class="muted">No perk choices at this level.</p>`}
-      <p class="muted">A class feature that hands you a specific perk ignores prerequisites. Fighting Style, Survivalist, Occultist, Well-Versed, and the human knack are the choices above.</p>
+      <p class="muted">A class feature that hands you a specific perk ignores prerequisites. Fighting Style, Survivalist, Occultist, Well-Versed, and human Aptitude are the choices above. Everyone also takes a perk at creation.</p>
     </article>`;
 }
 
@@ -111,7 +111,7 @@ function perkSelect(hero, slot) {
 }
 
 function slotHint(mode) {
-  if (mode === "fighter") return "Needs a Melee or Ranged training prerequisite. Other requirements are waived.";
+  if (mode === "fighter") return "Needs a Brawl, Finesse, Melee, or Ranged training prerequisite. Other requirements are waived.";
   if (mode === "hunter") return "Needs a Survival training prerequisite. Other requirements are waived.";
   if (mode === "witch") return "Needs a Mysticism training prerequisite. Other requirements are waived.";
   if (mode === "bard") return "Stat minimums are waived.";

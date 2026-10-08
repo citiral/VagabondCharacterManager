@@ -107,7 +107,7 @@ export function record(hero, sheet) {
             <input id="hero-level" data-field="level" data-render="1" type="number" min="0" value="${hero.level}">
           </label>
         </div>
-        <p class="muted">${hero.xp} / ${cost} XP to level ${hero.level + 1}. Even levels also grant a stat increase. Odd levels from 3rd grant a perk.</p>
+        <p class="muted">${hero.xp} / ${cost} XP to level ${hero.level + 1}. Even levels also grant a stat increase. You take a perk at creation, then again at every odd level from 3rd.</p>
         <div class="row">
           <button class="primary" data-act="level-up" ${hero.xp < cost ? "disabled" : ""}>Spend XP and level up</button>
           <button class="ghost" data-act="destiny">Destiny level up</button>

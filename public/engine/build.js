@@ -57,13 +57,13 @@ export function perkSlots(hero) {
   const slots = [];
   const level = hero.level || 0;
   if (hero.ancestry === "human") {
-    slots.push({ key: "human", label: "Human Knack", mode: "normal" });
+    slots.push({ key: "human", label: "Human Aptitude", mode: "normal" });
   }
   if (hero.classId === "bard" && level >= 1) {
     slots.push({ key: "bard", label: "Well-Versed", mode: "bard" });
   }
   if (hero.classId === "fighter" && level >= 1) {
-    const n = 2 + Math.floor(level / 4);
+    const n = 1 + Math.floor(level / 4);
     for (let i = 0; i < n; i++) {
       slots.push({ key: `fighter-${i}`, label: `Fighting Style ${i + 1}`, mode: "fighter" });
     }
@@ -73,6 +73,9 @@ export function perkSlots(hero) {
   }
   if (hero.classId === "witch" && level >= 1) {
     slots.push({ key: "witch", label: "Occultist", mode: "witch" });
+  }
+  if (level >= 1) {
+    slots.push({ key: "creation", label: "Starting Perk", mode: "normal" });
   }
   for (let l = 3; l <= level; l += 2) {
     slots.push({ key: `level-${l}`, label: `Level ${l}`, mode: "normal" });
@@ -158,7 +161,9 @@ export function perkAllowed(hero, perk, mode, slotKey) {
 
   // Feature slots keep only their training gate. Bard waives stat minimums.
   // A perk granted by class or ancestry never comes through here.
-  if (mode === "fighter") return perkListsTraining(perk, "melee") || perkListsTraining(perk, "ranged");
+  if (mode === "fighter") {
+    return ["brawl", "finesse", "melee", "ranged"].some((skill) => perkListsTraining(perk, skill));
+  }
   if (mode === "hunter") return perkListsTraining(perk, "survival");
   if (mode === "witch") return perkListsTraining(perk, "mysticism");
 

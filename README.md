@@ -6,7 +6,7 @@ A shared character manager for [Vagabond](https://landoftheblind.myshopify.com/c
 
 Open the same address on another machine at the table and everyone shares one party, live. Heroes are saved on the server. With no database configured, they go in a local SQLite file. Set `DATABASE_URL` to use Postgres instead (as on Deno Deploy).
 
-Rules data is original shorthand for use at the table, based on the Core Rulebook v3 alpha preview. It is not a substitute for the book.
+Rules data is original shorthand for use at the table, based on the Core Rulebook v3 alpha 3 preview. It is not a substitute for the book.
 
 ![Hero record](docs/hero-record.png)
 
