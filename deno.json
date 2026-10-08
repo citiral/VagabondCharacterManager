@@ -5,6 +5,7 @@
   },
   "name": "vagabond character sheet editor",
   "version": "0.0.1",
+  "exports": "./server.ts",
   "description": "A tool for creating and managing characters for the Vagabond RPG",
   "deploy": {
     "org": "citiral",
