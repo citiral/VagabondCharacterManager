@@ -1,3 +1,5 @@
+// Fills the hero-record PDF. Field names match the form on public/hero-record.pdf.
+
 import {
   PDFDocument,
   PDFDict,
