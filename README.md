@@ -12,20 +12,30 @@ Rules data is original shorthand for use at the table, based on the Core Ruleboo
 
 ## Run
 
-Install [Deno](https://deno.land/), then from this directory:
+1. Install [Deno](https://deno.land/).
+2. Create a `.env` file in this directory (copy `.env.example`) with these two variables:
+   ```sh
+   AUTH_SECRET=some-long-random-string
+   ADMIN_EMAIL=you@example.com
+   ```
+   - `AUTH_SECRET` signs login tokens. It must be at least 16 characters, or the server exits on startup.
+   - `ADMIN_EMAIL` is the account that is approved as soon as it registers and can approve everyone else at `/admin`.
+3. Start the server:
+   ```sh
+   deno task start
+   ```
+4. Open http://localhost:8080/register and register with the same email as `ADMIN_EMAIL` to create the admin user.
 
-```sh
-deno task start
-```
+Every other account stays pending until the admin approves it at `/admin`.
 
-Open http://localhost:8080. The party is stored in `data/vagabond.sqlite`.
+The party is stored in `data/vagabond.sqlite`. Delete the `data/` folder to start over with no accounts and no heroes.
 
-Optional environment variables (see `.env.example`):
+Other optional environment variables:
 
-- `PORT` — listen port, default `8080`
-- `DATABASE_URL` — Postgres connection string. When unset, the app uses SQLite.
-- `AUTH_SECRET` — long random string that signs login tokens. Required.
-- `ADMIN_EMAIL` — the address that is approved on registration and can approve everyone else at `/admin`.
+- `PORT`: listen port, default `8080`.
+- `DATABASE_URL`: Postgres connection string. When unset, the app uses SQLite.
+
+## Test
 
 ```sh
 deno task test
