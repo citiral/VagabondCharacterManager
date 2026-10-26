@@ -1,3 +1,12 @@
+/* Goodmountain by Hermann S Designs — see fonts/Goodmountain-LICENSE.md */
+@font-face {
+  font-family: Goodmountain;
+  src: url("fonts/Goodmountain-Regular.woff2") format("woff2");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --ink: #241910;
   --ink-soft: #6a5844;
@@ -53,7 +62,14 @@ h1, h2, h3, .brand, .kicker, .tab, .stat b, .dc { font-family: Cinzel, "Times Ne
   border-right: 1px solid rgba(243, 234, 216, 0.08);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 120px);
 }
-.brand { font-size: 1.35rem; letter-spacing: 0.14em; font-weight: 700; margin: 0; }
+
+.brand {
+  font-family: Goodmountain, Cinzel, "Times New Roman", serif;
+  font-size: 1.35rem;
+  letter-spacing: 0.14em;
+  font-weight: normal;
+  margin: 0;
+}
 .brand span { color: #e0b56a; }
 .tagline { margin: 4px 0 16px; color: #cbbba4; font-size: 0.92rem; }
 .side-actions, .row, .vitals, .stats, .saves, .tabs, .shop-tools { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -145,6 +161,10 @@ h1, h2, h3, .brand, .kicker, .tab, .stat b, .dc { font-family: Cinzel, "Times Ne
   width: min(100%, 640px);
   padding: 0;
   color: var(--ink);
+}
+
+#hero-name {
+  font-family: Goodmountain, Cinzel, "Times New Roman", serif;
 }
 .name-input::placeholder { color: #b3a28c; }
 .identity { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }

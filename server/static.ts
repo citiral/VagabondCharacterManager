@@ -1,6 +1,6 @@
 // Files from public/. A request can't climb out of that directory.
 
-import { json } from "./http.ts";
+import { json } from './http.ts';
 
 const types: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -10,6 +10,7 @@ const types: Record<string, string> = {
   ".json": "application/json",
   ".pdf": "application/pdf",
   ".ico": "image/x-icon",
+  '.woff2': 'font/woff2',
 };
 
 export async function serveStatic(publicDir: string, pathname: string) {

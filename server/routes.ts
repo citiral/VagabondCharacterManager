@@ -1,18 +1,18 @@
 // HTTP API for the party, plus login, approval, the live socket, and static files.
 // Writes go through the party cache; this file only checks the request.
 
-import { blankHero } from "../public/engine.js";
-import { approvedUser, authCookie, clearAuthCookie, dummyPasswordHash, hashPassword, normalizeEmail, normalizeUsername, verifyPassword } from "./auth.ts";
-import { json } from "./http.ts";
-import { liveSocket } from "./live.ts";
-import { adminPage, loginPage, notFoundPage, registerPage, usernamePage } from "./pages.ts";
-import type { Party } from "./party.ts";
-import { serveStatic } from "./static.ts";
-import { asHero, type AccountStore, HERO_ID, MAX_HERO_BYTES, snapshot } from "./store.ts";
+import { blankHero } from '../public/engine.js';
+import { approvedUser, authCookie, clearAuthCookie, dummyPasswordHash, hashPassword, normalizeEmail, normalizeUsername, verifyPassword } from './auth.ts';
+import { json } from './http.ts';
+import { liveSocket } from './live.ts';
+import { adminPage, loginPage, notFoundPage, registerPage, usernamePage } from './pages.ts';
+import type { Party } from './party.ts';
+import { serveStatic } from './static.ts';
+import { asHero, type AccountStore, HERO_ID, MAX_HERO_BYTES, snapshot } from './store.ts';
 
 export type AuthOptions = { secret: string; adminEmail: string };
 
-const PUBLIC_FILES = new Set(["/styles.css", "/favicon.svg"]);
+const PUBLIC_FILES = new Set(['/styles.css', '/favicon.svg', '/fonts/Goodmountain-Regular.woff2']);
 
 export async function handleRequest(
   request: Request,
