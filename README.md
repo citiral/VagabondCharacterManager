@@ -6,7 +6,7 @@ A shared character manager for [Vagabond](https://landoftheblind.myshopify.com/c
 
 Open the same address on another machine at the table, sign in, and you see the same party, live. You edit the heroes linked to your account. A hero with no account can be claimed, and released if that was the wrong one. New accounts stay closed until the admin approves them at `/admin`. Heroes are saved on the server. With no database configured, they go in a local SQLite file. Set `DATABASE_URL` to use Postgres instead (as on Deno Deploy).
 
-Rules data is original shorthand for use at the table, based on the Core Rulebook v3 alpha 3 preview. It is not a substitute for the book.
+Rules data is original shorthand for use at the table, based on the Core Rulebook v3 alpha 4 preview. It is not a substitute for the book.
 
 ![Hero record](docs/hero-record.png)
 

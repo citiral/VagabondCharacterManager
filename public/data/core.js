@@ -1,4 +1,4 @@
-// Mechanical data for Vagabond (Core Rulebook v3, alpha 3).
+// Mechanical data for Vagabond (Core Rulebook v3, alpha 4).
 // Summaries are original shorthand for use at the table, not the book text.
 
 export const STATS = [

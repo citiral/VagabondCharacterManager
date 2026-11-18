@@ -1,4 +1,4 @@
-import { PACKS } from "./public/data.js";
+import {PACKS} from "./public/data.js";
 import {
   addCatalog,
   ancestryFromD66,
@@ -6,11 +6,13 @@ import {
   blankHero,
   catalogById,
   classFromD66,
+  countPerk,
   derive,
   formatMoney,
   itemSlots,
   normalize,
   perkAllowed,
+  perkById,
   setStatArray,
   spellLimit,
   statScore,
@@ -85,17 +87,23 @@ Deno.test("speed, armor, slots, and fatigue", () => {
   addCatalog(h, "backpack");
   h.items.find((i) => i.catalogId === "backpack").equipped = true;
   let d = derive(h);
+  // Halfling Nimble grants Skirmisher: +5' speed and 1 less armor penalty.
   if (d.speed !== 35 + 5 + 10) throw new Error("speed " + d.speed);
-  if (d.armorPenalty !== 1 || d.armorRating !== 1) throw new Error("armor");
+  if (d.armorPenalty !== 0 || d.armorRating !== 1) throw new Error("armor");
   if (d.slotMax !== 8 + 4 + 3) throw new Error("slots " + d.slotMax);
   h.perkChoices["level-3"] = "skirmisher";
   h.trainings = ["finesse"];
   d = derive(normalize(h));
   if (d.armorPenalty !== 0) throw new Error("skirmisher penalty");
   if (d.speed !== 35 + 5 + 10 + 5) throw new Error("skirmisher speed " + d.speed);
+  h.perkChoices["level-5"] = "skirmisher";
+  if (perkAllowed(normalize(h), perkById("skirmisher"), "normal", "creation")) throw new Error("skirmisher cap");
 
   const orc = hero({ ancestry: "orc", base: { might: 7, dexterity: 3, awareness: 3, reason: 3, presence: 3, luck: 2 } });
-  if (derive(orc).slotMax !== 17) throw new Error("orc slots");
+  const o = derive(orc);
+  if (o.slotMax !== 15) throw new Error("orc slots");
+  if (!o.tags.includes("Darksight")) throw new Error("orc darksight");
+  if (countPerk(orc, "bully") !== 1 || countPerk(orc, "infravision") !== 1) throw new Error("orc perks");
   orc.fatigue = 5;
   if (derive(normalize(orc)).effectiveMaxHp !== 0) throw new Error("fatigue");
 });
