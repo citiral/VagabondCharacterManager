@@ -1,6 +1,6 @@
 // derive() folds a hero into the numbers on the record: HP, saves, speed, warnings.
 
-import { ALCHEMY, SKILLS } from "../data.js";
+import {ALCHEMY, SKILLS} from "../data.js";
 import {
   ancestryById,
   automaticTrainings,
@@ -9,6 +9,7 @@ import {
   classById,
   formatMoney,
   isTrained,
+  perkById,
   scores,
   spellById,
   STAT_IDS,
@@ -26,7 +27,7 @@ import {
   spellLimit,
   trainingBudget,
 } from "./build.js";
-import { itemSlots } from "./gear.js";
+import {itemSlots} from "./gear.js";
 
 function speedFromDex(dex) {
   if (dex <= 3) return 25;
@@ -59,7 +60,7 @@ export function derive(hero) {
   const packBonus = wornPacks.length ? Math.max(...wornPacks.map((item) => item.capacity)) : 0;
   if (wornPacks.length > 1) warnings.push("Only one worn pack adds item slots. The largest bonus is used.");
 
-  const slotMax = 8 + sc.might + (hero.ancestry === "orc" ? 2 : 0) + merchantSlots + packMule * 2 + packBonus;
+  const slotMax = 8 + sc.might + merchantSlots + packMule * 2 + packBonus;
   const slotUsed = (hero.items || []).reduce((sum, item) => sum + itemSlots(item), 0) + fatigue;
 
   // Armor, speed, and the weapons in hand.
@@ -76,7 +77,6 @@ export function derive(hero) {
 
   const baseSpeed = speedFromDex(sc.dexterity);
   let bonus = 0;
-  if (hero.ancestry === "halfling" || hero.ancestry === "goblin") bonus += 5;
   bonus += countPerk(hero, "treads-lightly") * 5;
   bonus += skirmish * 5;
   if (hero.classId === "barbarian" && level >= 2) bonus += 5 * (1 + Math.floor((level - 2) / 4));
@@ -162,8 +162,9 @@ export function derive(hero) {
   const sneak = hero.classId === "rogue" && level >= 1 ? 1 + Math.floor((level - 1) / 3) : 0;
 
   const tags = [];
-  if (["dwarf", "goblin", "orc"].includes(hero.ancestry) || countPerk(hero, "infravision")) tags.push("Darksight");
-  if (hero.ancestry === "halfling") tags.push("Ignores Reflex hinder");
+  if (countPerk(hero, "infravision")) tags.push("Darksight");
+  if (hero.ancestry === "halfling" || hero.ancestry === "goblin") tags.push("Ignores Reflex hinder");
+  if (hero.ancestry === "orc") tags.push("Grapples and shoves one size larger");
   if (countPerk(hero, "climber") || (hero.classId === "hunter" && level >= 2)) tags.push("Climb");
   if (countPerk(hero, "swimmer") || (hero.classId === "hunter" && level >= 2)) tags.push("Swim");
   if (hero.ancestry === "draken") tags.push(`Half ${hero.drakenWard} damage`);
@@ -184,6 +185,17 @@ export function derive(hero) {
   }
   if (cls && level >= 1) {
     for (const id of grantedClassPerks(cls.id)) grants.push({ id, source: cls.name });
+  }
+
+  // Ability Redundancy: a trait or feature that grants something you already have lets you pick another.
+  for (const { id, source } of grants) {
+    const perk = perkById(id);
+    if (perk && !perk.repeat && countPerk(hero, id) > 1) {
+      warnings.push(`${source} grants ${perk.name}, which you already have. Swap your other pick for a different perk.`);
+    }
+  }
+  if (hero.elfSpell && classSpells.includes(hero.elfSpell)) {
+    warnings.push(`Naturally Attuned grants ${spellById(hero.elfSpell)?.name}, which your class already knows. Choose a different spell for one of them.`);
   }
 
   const castSkill = cls?.cast || "";

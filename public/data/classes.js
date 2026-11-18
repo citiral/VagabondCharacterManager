@@ -13,7 +13,7 @@ export const CLASSES = [
     features: [
       feat(1, "Alchemy", "Know 4 alchemical formulae worth up to your level × 50s. Craft them with 5s of materials and alchemy tools. Learn another every 3 levels."),
       feat(1, "Catalyze", "You have Deft Hands, and can craft an alchemical item with the Use action."),
-      feat(2, "Eureka", "Passing a Craft check by 15 or more banks a Studied die. The margin drops by 1 every 4 levels."),
+      feat(2, "Eureka", "Passing a Craft check by 10 or more banks a Studied die. The margin drops by 1 every 4 levels."),
       feat(4, "Potency", "+1 to each damage and healing die of your alchemical items, and those dice can explode. The bonus grows by 1 every 4 levels."),
       feat(6, "Mix", "Spend a Studied die and your Use action to combine two alchemical items so both happen at once. The mix goes inert at the start of your next turn."),
       feat(10, "Prima Materia", "Spend a Studied die to craft any alchemical item worth up to 10g without materials."),
@@ -144,8 +144,8 @@ export const CLASSES = [
     features: [
       feat(1, "Arcanum", "You have Gish and cast with Arcana. Learn 2 spells, one of which always has a damage base, and another every 3 levels. Mana is 2 × level. Cast max is 1 + half your level, rounded up."),
       feat(1, "Enspell", "One imbued spell stays on your weapon without focus. Skip your move to change it."),
-      feat(2, "Spell Parry", "If a save against a cast beats the difficulty by 15, pick a new target, ignoring immunity. The margin drops every 4 levels."),
-      feat(4, "Arcane Surge", "Other deliveries of your imbued spell cost 1 less mana. Once a round, one target of an imbued delivery is discounted, and the discount grows every 4 levels."),
+      feat(2, "Spell Parry", "If an enemy's cast deals you no damage while you have an imbued weapon equipped, and your save beats the difficulty by 10 or more, pick a new target and reroll the damage, which ignores immunity. The margin drops by 1 every 4 levels."),
+      feat(4, "Arcane Surge", "Once a round, when you deliver a spell with an imbued weapon, one target costs 1 less mana. The discount grows by 1 every 4 levels."),
       feat(6, "Esoteric Flow", "You may use the imbued spell's damage base for the attack. You are permanently under Blink."),
       feat(10, "Sword & Sorcery", "Once a round, Attack and Cast as the same action."),
     ],
@@ -172,7 +172,7 @@ export const CLASSES = [
     features: [
       feat(1, "Fisticuffs", "You have Dusted Knuckle. Equipped brawl weapons gain Vicious. When one of their damage dice resolves, either grow your next brawl dice one size until your turn starts, or grapple or shove."),
       feat(1, "Rope-a-Dope", "If a close enemy's attack deals you no damage, immediately attack or move 5' for free."),
-      feat(2, "Haymaker", "Beat your brawl difficulty by 15 and the target is dazed until your next turn. The margin drops by 1 every 4 levels. Gained at 2nd, 6th, and 10th."),
+      feat(2, "Haymaker", "Pass a brawl attack by 10 or more and the target is dazed until your next turn. The margin drops by 1 every 4 levels. Gained at 2nd, 6th, and 10th."),
       feat(4, "Moxie", "Favor on saves against dazed, frightened, grappled, and restrained. At 0 HP you stay up for Cd4 rounds (Cd6 at 8th); damage also ticks that die."),
       feat(6, "Title Holder", "Brawl weapons use a d6 that explodes on its two highest faces. At 10th level, a d8."),
     ],
@@ -186,9 +186,9 @@ export const CLASSES = [
     damageSpell: true,
     features: [
       feat(1, "Righteous", "You have Gish and cast with Leadership. Learn 2 spells, one of which always has a damage base, and another every 3 levels. Mana is 2 × level. Cast max is 1 + half your level, rounded up."),
-      feat(1, "Enspell", "One imbued spell stays on your weapon without focus. Skip your move to change it."),
+      feat(1, "Nimbus", "One imbued spell stays on your weapon without focus, and Aura deliveries cost 1 less mana."),
       feat(2, "Lay on Hands", "Spend 1 mana and an action, or skip your move, to heal d4 + level. The die grows every 4 levels."),
-      feat(4, "Paragon's Aura", "Aura deliveries cost 2 less mana. Once a round, one target of an imbued delivery is discounted, and the discount grows every 4 levels."),
+      feat(4, "Paragon's Aura", "Nimbus's Aura discount grows by 1 now and every 4 levels. The first time each round you damage an enemy inside your aura with an imbued weapon, it takes an extra damage die."),
       feat(6, "Divine Resolve", "You can't be blinded, paralyzed, or sickened. Lay on Hands clears those statuses."),
       feat(10, "Holy Diver", "You and your weapons are permanently under Bless and Exalt."),
     ],
