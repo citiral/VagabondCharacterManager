@@ -50,7 +50,7 @@ export async function handleRequest(
     return redirect("/username");
   }
 
-  const { ensureParty, edit, persistNow, claim, release, forget } = party;
+  const { ensureParty, reloadParty, persistNow, claim, release, forget } = party;
 
   if (path === "/api/live") {
     if (request.headers.get("upgrade")?.toLowerCase() !== "websocket") return json({ error: "Expected websocket" }, 426);
@@ -58,7 +58,7 @@ export async function handleRequest(
   }
 
   try {
-    if (path === "/api/heroes" && request.method === "GET") return json(await ensureParty());
+    if (path === "/api/heroes" && request.method === "GET") return json(await reloadParty());
 
     if (path === "/api/me" && request.method === "GET") return json({ id: user.id, username: user.username, role: user.role });
 
@@ -93,9 +93,7 @@ export async function handleRequest(
         const hero = asHero(await request.json().catch(() => null));
         if (!hero || hero.id !== id) return json({ error: "Bad hero" }, 400);
         if (snapshot(hero).length > MAX_HERO_BYTES) return json({ error: "That hero is too large to save." }, 413);
-        if (request.headers.get("x-immediate") === "1") return outcome(await persistNow(hero, user));
-        await ensureParty();
-        return outcome(edit(hero, user));
+        return outcome(await persistNow(hero, user));
       }
       if (request.method === "DELETE") {
         const result = await forget(id, user.id);

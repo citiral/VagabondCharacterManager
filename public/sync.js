@@ -217,7 +217,7 @@ function pushPending(useSocket) {
   for (const hero of pending) {
     fetch(`/api/heroes/${hero.id}`, {
       method: "PUT",
-      headers: { "content-type": "application/json", "x-immediate": "1" },
+      headers: { "content-type": "application/json" },
       body: JSON.stringify(hero),
       keepalive: true,
     });

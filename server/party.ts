@@ -1,6 +1,7 @@
 // The party every connected browser shares.
-// Edits are broadcast immediately and written to the database a few seconds later,
-// on a single queue so two saves can't pass each other.
+// Edits are written to the database and broadcast on a single queue, so two saves can't pass each other.
+// Other server instances may write too (old and new revisions overlap during a deploy),
+// so the party is reloaded from the database whenever a browser connects.
 
 import { snapshot, type HeroRecord, type HeroRow, type HeroStore } from "./store.ts";
 
@@ -38,6 +39,46 @@ export function createParty(store: HeroStore) {
       });
     }
     return await loadingParty;
+  }
+
+  function reloadParty(except?: WebSocket) {
+    return enqueue(async () => {
+      if (!party) return await ensureParty();
+      const heroes = await store.list();
+      const fresh = new Set(heroes.map((hero) => hero.id));
+      const next: HeroRecord[] = [];
+      const changed: HeroRecord[] = [];
+      const removed: string[] = [];
+      for (const hero of heroes) {
+        const local = party.find((entry) => entry.id === hero.id);
+        // A change that failed to write is still only here; keep it until the retry lands.
+        if (local && dirty.has(hero.id)) {
+          next.push(local);
+          continue;
+        }
+        persisted.set(hero.id, snapshot(hero));
+        next.push(hero);
+        if (
+          !local ||
+          Number(local.updatedAt) !== Number(hero.updatedAt) ||
+          (local.ownerId ?? null) !== (hero.ownerId ?? null) ||
+          (local.ownerName ?? "") !== (hero.ownerName ?? "")
+        ) changed.push(hero);
+      }
+      for (const local of party) {
+        if (fresh.has(local.id)) continue;
+        if (dirty.has(local.id)) {
+          next.push(local);
+          continue;
+        }
+        persisted.delete(local.id);
+        removed.push(local.id);
+      }
+      party = next;
+      for (const hero of changed) broadcast({ type: "upsert", hero }, except);
+      for (const id of removed) broadcast({ type: "delete", id }, except);
+      return party;
+    });
   }
 
   function broadcast(message: unknown, except?: WebSocket) {
@@ -130,10 +171,10 @@ export function createParty(store: HeroStore) {
     return { hero: stamped ?? hero };
   }
 
-  async function persistNow(hero: HeroRecord, user: Player): Promise<Edited> {
+  async function persistNow(hero: HeroRecord, user: Player, except?: WebSocket): Promise<Edited> {
     return await enqueue(async () => {
       await ensureParty();
-      const edited = edit(hero, user);
+      const edited = edit(hero, user, except);
       if ("error" in edited) return edited;
       const stamped = edited.hero;
       const json = snapshot(stamped);
@@ -259,7 +300,7 @@ export function createParty(store: HeroStore) {
     });
   }
 
-  return { ensureParty, edit, persistNow, claim, release, forget, enqueueFlush, shutdown, sockets };
+  return { ensureParty, reloadParty, persistNow, claim, release, forget, enqueueFlush, shutdown, sockets };
 }
 
 export type Party = ReturnType<typeof createParty>;

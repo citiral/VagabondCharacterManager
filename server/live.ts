@@ -6,10 +6,10 @@ import { asHero, HERO_ID, MAX_HERO_BYTES, snapshot } from "./store.ts";
 
 export function liveSocket(request: Request, party: Party, user: { id: string; username: string }) {
   const { socket, response } = Deno.upgradeWebSocket(request);
-  const { sockets, ensureParty, edit, forget, enqueueFlush } = party;
+  const { sockets, ensureParty, reloadParty, persistNow, forget, enqueueFlush } = party;
   sockets.add(socket);
   socket.onopen = () => {
-    ensureParty()
+    reloadParty(socket)
       .then((heroes) => {
         if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "party", heroes }));
       })
@@ -54,14 +54,18 @@ export function liveSocket(request: Request, party: Party, user: { id: string; u
       socket.send(JSON.stringify({ type: "error", error: "That hero is too large to save." }));
       return;
     }
-    ensureParty()
-      .then(() => edit(hero, user, socket))
+    persistNow(hero, user, socket)
       .then((result) => {
         if ("error" in result && socket.readyState === WebSocket.OPEN) {
           socket.send(JSON.stringify({ type: "error", error: result.error, hero: result.hero ?? null }));
         }
       })
-      .catch((error) => console.error(error));
+      .catch((error) => {
+        console.error(error);
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({ type: "error", error: "The server couldn't save that change yet. It will keep retrying." }));
+        }
+      });
   };
   socket.onclose = () => {
     sockets.delete(socket);
