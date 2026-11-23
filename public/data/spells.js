@@ -43,7 +43,7 @@ export const SPELLS = [
   S("knock", "Knock", null, "Open a barred, locked, or stuck door. The knock is audible out to 300'."),
   S("leech", "Leech", "Poison", "The target is sickened, and healing meant for them heals you instead."),
   S("levitate", "Levitate", null, "The target hovers an inch off the ground and can still walk through the air."),
-  S("life", "Life", null, "Revive someone who died since your last turn, at 1 HP and +1 fatigue. Upcast to heal d6 per mana."),
+  S("life", "Life", null, "Revive someone who died since your last turn, at 1 HP and +1 fatigue. Upcast to heal d6 per mana.", { heal: true }),
   S("light", "Light", "Fire", "The target sheds light out to Near. A crit blinds chosen beings in that light for Cd4."),
   S("mend", "Mend", null, "Repair objects if you supply materials. It also works as Life for artificials."),
   S("mirage", "Mirage", null, "An illusion of an object or effect. It has sound and looks real, but it can't touch anything."),

@@ -379,6 +379,14 @@ h1, h2, h3, .brand, .kicker, .tab, .stat b, .dc { font-family: Cinzel, "Times Ne
   color: var(--paper);
 }
 .cast-out b { font-family: Cinzel, serif; font-size: 1.4rem; }
+.cast-out small { display: block; margin-top: 4px; opacity: 0.85; }
+.cast-out .cast-actions { margin-top: 10px; flex-wrap: wrap; }
+.cast-out .ghost { color: var(--paper); border-color: rgba(243, 234, 216, 0.45); background: transparent; }
+.spell-row.on { border-color: var(--oxblood); }
+.spell-buttons { display: flex; gap: 6px; justify-content: flex-end; }
+.mana-chip { display: inline-flex; align-items: center; gap: 6px; }
+.mana-chip b { color: var(--sea); }
+.mana-chip .icon { width: 1.4rem; height: 1.4rem; }
 
 .party { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
 .party-card { padding: 14px; text-align: left; width: 100%; cursor: pointer; }

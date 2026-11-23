@@ -47,6 +47,8 @@ export {
   weaponDamage,
 } from "./engine/gear.js";
 
+export { castCost, castPayment, castSkillFor, spellDice } from "./engine/magic.js";
+
 export { derive } from "./engine/sheet.js";
 
 export {

@@ -4,6 +4,9 @@ import {
   ancestryFromD66,
   applyPack,
   blankHero,
+  castCost,
+  castPayment,
+  castSkillFor,
   catalogById,
   classFromD66,
   countPerk,
@@ -14,6 +17,8 @@ import {
   perkAllowed,
   perkById,
   setStatArray,
+  spellById,
+  spellDice,
   spellLimit,
   statScore,
   weaponDamage,
@@ -182,6 +187,45 @@ Deno.test("perk gates", () => {
   if (perkAllowed(h, heavy, "normal", "level-3")) throw new Error("normal respects might");
   const book = { id: "bookworm", stats: { reason: 4 }, repeat: true };
   if (!perkAllowed(h, book, "bard", "bard")) throw new Error("bard");
+});
+
+Deno.test("casting costs, skills, dice, and Tap", () => {
+  const wizard = hero({ classId: "wizard", level: 1, spells: ["burn"] });
+  const burn = spellById("burn");
+  if (castCost(wizard, burn, { delivery: "remote", dice: 1, effect: false }).mana !== 0) throw new Error("free damage");
+  if (castCost(wizard, burn, { delivery: "remote", dice: 1, effect: true }).mana !== 1) throw new Error("damage and effect");
+  if (castCost(wizard, burn, { delivery: "cone", dice: 3, effect: true, upcast: 1 }).mana !== 6) throw new Error("cone");
+  if (castCost(wizard, burn, { delivery: "remote", dice: 1, effect: false, targets: 3 }).mana !== 2) throw new Error("targets");
+  const sculptor = hero({ classId: "wizard", level: 4, spells: ["burn"] });
+  if (castCost(sculptor, burn, { delivery: "cone", dice: 1, effect: false, upcast: 2 }).mana !== 3) throw new Error("sculpt");
+  const revelator = hero({ classId: "revelator", level: 1 });
+  if (castCost(revelator, burn, { delivery: "aura", dice: 1, effect: false }).mana !== 1) throw new Error("nimbus");
+
+  const life = spellById("life");
+  const luminary = hero({ classId: "luminary", level: 3 });
+  if (castCost(luminary, life, { delivery: "touch", dice: 2 }).mana !== 2) throw new Error("healing dice");
+  const heal = spellDice(luminary, life, 2);
+  if (heal.sides !== 6 || !heal.explodeOn.includes(1) || !heal.explodeOn.includes(6)) throw new Error("radiant healer");
+
+  const sorcerer = hero({ classId: "sorcerer", level: 4 });
+  const zap = spellDice(sorcerer, spellById("zap"), 2);
+  if (zap.expr !== "2d8" || !zap.explodeOn.includes(1)) throw new Error("spell-slinger " + zap.expr);
+  if (spellDice(wizard, burn, 0) !== null) throw new Error("no dice");
+
+  const sheet = derive(sorcerer);
+  sorcerer.mana = 1;
+  const tap = castPayment(sorcerer, sheet, 3);
+  if (!tap.ok || tap.fromMana !== 1 || tap.fromHp !== 2) throw new Error("tap");
+  wizard.mana = 1;
+  if (castPayment(wizard, derive(wizard), 3).ok) throw new Error("wizard can't tap");
+  sorcerer.tapped = 2;
+  if (derive(sorcerer).effectiveMaxHp !== sheet.effectiveMaxHp - 2) throw new Error("tapped max hp");
+
+  const elf = hero({ ancestry: "elf", classId: "fighter", level: 1, elfSpell: "light", elfCastSkill: "influence" });
+  const elfSheet = derive(elf);
+  if (castSkillFor(elf, elfSheet, "light")?.id !== "influence") throw new Error("elf cast skill");
+  if (castCost(elf, spellById("light"), { delivery: "cube", dice: 1, effect: false }).mana !== 0) throw new Error("attuned");
+  if (castSkillFor(wizard, derive(wizard), "burn")?.id !== "arcana") throw new Error("wizard cast skill");
 });
 
 Deno.test("stat array swaps stay inside the pool", () => {

@@ -66,6 +66,11 @@ export const OPEN_ACTS = new Set([
   "cast-spell",
   "cast-delivery",
   "cast-effect",
+  "cast-pick",
+  "cast-check",
+  "cast-attuned",
+  "cast",
+  "cast-roll",
 ]);
 
 export function canEdit(hero = current()) {

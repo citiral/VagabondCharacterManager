@@ -47,6 +47,7 @@ export function blankHero() {
     wealth: 3000,
     hp: null,
     mana: null,
+    tapped: 0,
     luck: null,
     fatigue: 0,
     studied: 0,
@@ -183,6 +184,7 @@ export function normalize(hero) {
   if (hero.hp != null) hero.hp = Math.max(0, Math.trunc(Number(hero.hp)));
   if (hero.mana != null) hero.mana = Math.max(0, Math.trunc(Number(hero.mana)));
   if (hero.luck != null) hero.luck = Math.max(0, Math.trunc(Number(hero.luck)));
+  hero.tapped = Math.max(0, Math.trunc(Number(hero.tapped) || 0));
   hero.conditions = hero.conditions || [];
   delete hero.player;
   return hero;

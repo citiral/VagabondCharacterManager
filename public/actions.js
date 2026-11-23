@@ -1,7 +1,7 @@
 // Clicks and typing. data-act chooses the edit; data-field writes the hero.
 
 import { PACKS } from "./data.js";
-import { attackProfile, plainDie, pushLog, rollCheck, rollExpr } from "./dice.js";
+import { attackProfile, plainDie, pushLog, rollCheck, rollExpr, rollPool } from "./dice.js";
 import {
   addCatalog,
   ancestryFromD66,
@@ -28,6 +28,7 @@ import {
 } from "./engine.js";
 import { canEdit, current, hydrate, OPEN_ACTS, state } from "./state.js";
 import { commit, removeRemote, scheduleSave } from "./sync.js";
+import { castSettings } from "./ui/magic.js";
 import { render } from "./ui/render.js";
 
 // Changes to the open hero, and the clicks that make them.
@@ -129,9 +130,11 @@ function onAct(el) {
   if (act === "gear-cat") { state.gearCat = el.value; render(); return; }
   if (act === "spell-filter") { state.spellFilter = el.dataset.filter || "all"; render(); return; }
   if (act === "spell-type") { state.spellType = el.value; render(); return; }
-  if (act === "cast-spell") { state.castSpell = el.value; state.dice = spellById(el.value)?.damage ? 1 : 0; render(); return; }
+  if (act === "cast-spell" || act === "cast-pick") return pickSpell(el.value || el.dataset.id);
   if (act === "cast-delivery") { state.delivery = el.value; render(); return; }
   if (act === "cast-effect") { state.effect = el.checked; render(); return; }
+  if (act === "cast-check") { state.castCheck = el.checked; render(); return; }
+  if (act === "cast-attuned") { state.attuned = el.checked; render(); return; }
   if (!hero) return;
   if (act === "claim") return claimHero(hero);
   if (act === "release") return releaseHero(hero);
@@ -232,6 +235,8 @@ function onAct(el) {
   else if (act === "roll-save") return rollSave(hero, el.dataset.save);
   else if (act === "roll-weapon") return rollWeapon(hero, el.dataset.uid);
   else if (act === "roll-unarmed") return rollWeapon(hero, null);
+  else if (act === "cast") return castSpell(hero);
+  else if (act === "cast-roll") return rollSpellDice(hero);
   else return;
   commit(hero);
 }
@@ -350,6 +355,7 @@ function rest(hero) {
   const before = derive(hero);
   const hp = poolValue(hero, "hp", before);
   if (hp >= before.effectiveMaxHp) hero.fatigue = Math.max(0, (hero.fatigue || 0) - 1);
+  hero.tapped = 0;
   const after = derive(hero);
   hero.hp = after.effectiveMaxHp;
   hero.mana = after.maxMana;
@@ -417,6 +423,60 @@ function rollWeapon(hero, uid) {
     state.log[0].detail += `. Damage ${damage.total} (${damage.text})`;
   }
   render();
+}
+
+// Spells: pick one for the casting panel, cast it, or roll its dice again.
+function pickSpell(id) {
+  const spell = spellById(id);
+  state.castSpell = id;
+  state.dice = spell?.damage || spell?.heal ? 1 : 0;
+  render();
+}
+
+function spellRoll(dice) {
+  const explodeOn = state.explode && !dice.explodeOn.includes(dice.sides) ? [...dice.explodeOn, dice.sides] : dice.explodeOn;
+  const roll = rollPool(dice.count, dice.sides, explodeOn);
+  const label = dice.heal ? "Healing" : `${dice.kind} damage`;
+  return `${label} ${roll.total} (${roll.text})`;
+}
+
+function castSpell(hero) {
+  const sheet = derive(hero);
+  const cast = castSettings(hero, sheet);
+  const { spell, cost, pay } = cast;
+  if (!spell || cast.over) return;
+  const editable = canEdit(hero);
+  if (editable && !pay.ok) return;
+  const title = `${spell.name} · ${cost.delivery.name}`;
+  let spent = "";
+  if (editable) {
+    hero.mana = pay.pool - pay.fromMana;
+    if (pay.fromHp) {
+      hero.hp = Math.max(0, poolValue(hero, "hp", sheet) - pay.fromHp);
+      hero.tapped = (hero.tapped || 0) + pay.fromHp;
+    }
+    spent = pay.fromHp ? `Spent ${pay.fromMana} mana and tapped ${pay.fromHp} HP` : `Spent ${cost.mana} mana`;
+    scheduleSave(hero, true);
+  }
+  let pass = true;
+  if (cast.check && cast.skill) {
+    pass = rollCheck(`${title} · ${cast.skill.name}`, cast.skill.dc, sheet.castCrit).pass;
+  } else {
+    pushLog({ title, detail: "Cast without a check", pass: true });
+  }
+  const notes = [];
+  if (pass && cast.dice) notes.push(spellRoll(cast.dice));
+  if (!pass) notes.push("The spell fails");
+  if (spent) notes.push(spent);
+  state.log[0].detail += `. ${notes.join(". ")}.`;
+  render();
+}
+
+function rollSpellDice(hero) {
+  const sheet = derive(hero);
+  const { spell, dice } = castSettings(hero, sheet);
+  if (!spell || !dice) return;
+  pushAndRender({ title: spell.name, detail: spellRoll(dice), pass: true });
 }
 
 function pushAndRender(entry) {

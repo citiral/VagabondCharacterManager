@@ -28,6 +28,21 @@ export function rollExpr(expr, explode) {
   return { total: rolls.reduce((sum, face) => sum + face, 0) + mod, text: rolls.join(" + ") + (mod ? ` + ${mod}` : "") };
 }
 
+// Rolls `count` dice. A die showing a face in `explodeOn` rolls again and adds.
+export function rollPool(count, sides, explodeOn = []) {
+  const rolls = [];
+  for (let i = 0; i < count; i++) {
+    let face = rollDie(sides);
+    rolls.push(face);
+    let guard = 0;
+    while (explodeOn.includes(face) && guard++ < 12) {
+      face = rollDie(sides);
+      rolls.push(face);
+    }
+  }
+  return { total: rolls.reduce((sum, face) => sum + face, 0), text: rolls.join(" + ") };
+}
+
 export function pushLog(entry) {
   state.log.unshift(entry);
   state.log = state.log.slice(0, 6);
