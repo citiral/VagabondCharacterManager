@@ -10,3 +10,4 @@ installLifecycle();
 load().catch((error) => {
   app.innerHTML = `<p class="banner">${esc(error.message)}</p>`;
 });
+
