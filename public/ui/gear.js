@@ -47,7 +47,7 @@ export function gear(hero, sheet) {
               <input id="custom-weapon" placeholder="d6, Close, 1h">
             </label>
           </div>
-          <button class="ghost" data-act="custom">Add to the sack</button>
+          <button class="ghost" data-act="custom-item">Add to the sack</button>
         </section>
         <section>
           <h2>Market</h2>

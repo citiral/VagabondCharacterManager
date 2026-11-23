@@ -188,7 +188,7 @@ function onAct(el) {
   else if (act === "grip") {
     const item = hero.items.find((entry) => entry.uid === el.dataset.uid);
     if (item) item.gripMode = item.gripMode === "2h" ? "1h" : "2h";
-  } else if (act === "custom") addCustom(hero);
+  } else if (act === "custom-item") return addCustom(hero);
   else if (act === "spell-add") toggleList(hero, "spells", el.dataset.id, true);
   else if (act === "spell-forget") {
     if (classById(hero.classId)?.requiredSpell === el.dataset.id) return;
