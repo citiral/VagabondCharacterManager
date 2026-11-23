@@ -35,7 +35,7 @@ export function pushLog(entry) {
 export function attackProfile(hero, item, sheet) {
   const options = (item.types || []).map((id) => sheet.skills.find((skill) => skill.id === id)).filter(Boolean);
   options.sort((a, b) => a.dc - b.dc || Number(b.trained) - Number(a.trained));
-  return { skill: options[0], trained: options.some((skill) => skill.trained), damage: weaponDamage(item) };
+  return { skill: options[0], trained: options.some((skill) => skill.trained), damage: weaponDamage(item, hero) };
 }
 
 export function rollCheck(title, dc, critAt) {

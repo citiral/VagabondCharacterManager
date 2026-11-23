@@ -16,6 +16,7 @@ import {
   setStatArray,
   spellLimit,
   statScore,
+  weaponDamage,
   xpToLevel,
 } from "./public/engine.js";
 
@@ -124,6 +125,19 @@ Deno.test("gunslinger shooting irons grants quick draw", () => {
   if (!sheet.grants.some((grant) => grant.id === "quick-draw" && grant.source === "Gunslinger")) {
     throw new Error("quick draw grant");
   }
+});
+
+Deno.test("marksmanship grows ranged weapon dice only", () => {
+  const h = hero({ classId: "gunslinger", level: 3 });
+  addCatalog(h, "handgun");
+  addCatalog(h, "longbow");
+  addCatalog(h, "dagger");
+  const [handgun, longbow, dagger] = h.items;
+  if (weaponDamage(handgun, h) !== "d4") throw new Error("handgun without perk");
+  h.perkChoices["level-3"] = "marksmanship";
+  if (weaponDamage(handgun, h) !== "d6") throw new Error("handgun " + weaponDamage(handgun, h));
+  if (weaponDamage(longbow, h) !== "d10") throw new Error("longbow " + weaponDamage(longbow, h));
+  if (weaponDamage(dagger, h) !== "d4") throw new Error("dagger " + weaponDamage(dagger, h));
 });
 
 Deno.test("xp costs and d66 tables", () => {

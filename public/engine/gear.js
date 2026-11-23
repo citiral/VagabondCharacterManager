@@ -1,6 +1,7 @@
 // Catalog rows become items in the sack. Slot cost and weapon damage live here.
 
 import { PACKS } from "../data.js";
+import { countPerk } from "./build.js";
 import { catalogById } from "./model.js";
 
 export function itemSlots(item) {
@@ -21,9 +22,10 @@ function stepDie(die, steps) {
   return `d12+${next - (ladder.length - 1)}`;
 }
 
-export function weaponDamage(item) {
+export function weaponDamage(item, hero) {
   let die = item.damage || "d4";
   if (item.grip === "v" && item.gripMode === "2h" && die !== "1") die = stepDie(die, 1);
+  if (hero && item.types?.includes("ranged") && countPerk(hero, "marksmanship")) die = stepDie(die, 1);
   return die;
 }
 

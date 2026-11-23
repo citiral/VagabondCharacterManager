@@ -229,7 +229,7 @@ function magicLines(hero, sheet) {
   return lines;
 }
 
-function fillWeapons(form, sheet) {
+function fillWeapons(form, hero, sheet) {
   const weapons = sheet.weapons.slice(0, 3);
   for (let i = 1; i <= 3; i++) {
     const item = weapons[i - 1];
@@ -243,7 +243,7 @@ function fillWeapons(form, sheet) {
     }
     const code = gripCode(item, grip.getOptions());
     setText(form, `Weapon ${i}`, item.name);
-    setText(form, `Weapon Damage ${i}`, weaponDamage(item));
+    setText(form, `Weapon Damage ${i}`, weaponDamage(item, hero));
     setText(form, `Weapon Properties ${i}`, weaponProps(item, code));
     grip.select(code);
   }
@@ -324,7 +324,7 @@ export async function heroRecordBytes(hero, template) {
   setText(form, "Occupied Item Slots", num(used));
   setText(form, "Maximum Item Slots", num(8 + sheet.scores.might + bonus));
 
-  fillWeapons(form, sheet);
+  fillWeapons(form, hero, sheet);
 
   const magic = magicLines(hero, sheet);
   const mid = Math.ceil(magic.length / 2);

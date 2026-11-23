@@ -151,7 +151,7 @@ function weaponRow(hero, item, sheet) {
   const props = (item.props || []).map((id) => id[0].toUpperCase() + id.slice(1)).join(", ");
   return `
     <button class="weapon" data-act="roll-weapon" data-uid="${item.uid}">
-      <span class="who"><strong>${esc(item.name)}</strong><small>${esc(weaponDamage(item))} · ${esc(item.range)} · ${esc(props || "no properties")}${profile.trained ? "" : " · properties asleep until trained"}</small></span>
+      <span class="who"><strong>${esc(item.name)}</strong><small>${esc(weaponDamage(item, hero))} · ${esc(item.range)} · ${esc(props || "no properties")}${profile.trained ? "" : " · properties asleep until trained"}</small></span>
       <span class="dc">${profile.skill ? profile.skill.dc : "—"}</span>
       <span class="muted">${profile.skill ? esc(profile.skill.name) : ""}</span>
     </button>`;
