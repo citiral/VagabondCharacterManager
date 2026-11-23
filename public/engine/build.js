@@ -40,6 +40,7 @@ export function grantedClassPerks(classId) {
     barbarian: ["interceptor"],
     dancer: ["fallaway-reverse"],
     druid: ["shapechanger"],
+    gunslinger: ["quick-draw"],
     luminary: ["assured-healer"],
     magus: ["gish"],
     merchant: ["deft-hands"],

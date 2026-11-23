@@ -117,6 +117,15 @@ Deno.test("fighter crit range, rogue dice, merchant pockets", () => {
   if (derive(merchant).slotMax !== 8 + statScore(merchant, "might") + 4) throw new Error("pockets");
 });
 
+Deno.test("gunslinger shooting irons grants quick draw", () => {
+  const gunslinger = hero({ classId: "gunslinger", level: 1 });
+  const sheet = derive(gunslinger);
+  if (countPerk(gunslinger, "quick-draw") !== 1) throw new Error("quick draw count");
+  if (!sheet.grants.some((grant) => grant.id === "quick-draw" && grant.source === "Gunslinger")) {
+    throw new Error("quick draw grant");
+  }
+});
+
 Deno.test("xp costs and d66 tables", () => {
   if (xpToLevel(1, "normal") !== 10) throw new Error("normal");
   if (xpToLevel(3, "quick") !== 5) throw new Error("quick");
