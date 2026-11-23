@@ -307,6 +307,16 @@ h1, h2, h3, .brand, .kicker, .tab, .stat b, .dc { font-family: Cinzel, "Times Ne
   min-width: 0;
 }
 .choices { display: flex; flex-wrap: wrap; gap: 6px; }
+.choices .check { margin: 0 10px 0 0; }
+.custom-form .weapon-only, .custom-form .armor-only { display: none; }
+.custom-form:has(#custom-kind option[value="weapon"]:checked) .weapon-only,
+.custom-form:has(#custom-kind option[value="armor"]:checked) .armor-only { display: flex; }
+.custom-error { color: var(--danger); }
+.item-notes { display: block; white-space: pre-wrap; color: var(--ink-soft); }
+.uses { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 4px; }
+.uses .pips { color: var(--oxblood); letter-spacing: 2px; }
+.weapon-wrap:has(.weapon-extra) .weapon { border-bottom: 0; }
+.weapon-extra { padding: 0 0 6px; border-bottom: 1px solid rgba(36, 25, 16, 0.08); }
 .choices button.on { background: var(--ink); color: var(--paper); }
 .perk-slot, .train-slot { display: grid; grid-template-columns: minmax(0, 140px) minmax(0, 1fr); gap: 8px; align-items: center; margin: 6px 0; min-width: 0; max-width: 100%; }
 .list-pick { display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow: auto; padding-right: 4px; min-width: 0; }

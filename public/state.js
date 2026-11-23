@@ -24,6 +24,7 @@ export const state = {
   error: "",
   gearQuery: "",
   gearCat: "All",
+  editItem: "",
   spellQuery: "",
   spellFilter: "all",
   spellType: "",

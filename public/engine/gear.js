@@ -51,6 +51,9 @@ export function instantiate(entry, qty = 1) {
     zeroWhenWorn: !!entry.zeroWhenWorn,
     blurb: entry.blurb || entry.type || "",
     type: entry.type || "",
+    notes: entry.notes || "",
+    usesMax: entry.usesMax || 0,
+    uses: entry.usesMax || 0,
   };
 }
 

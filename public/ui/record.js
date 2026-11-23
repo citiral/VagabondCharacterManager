@@ -3,7 +3,7 @@
 import { PACES, STATS, STATUSES } from "../data.js";
 import { attackProfile } from "../dice.js";
 import { perkById, weaponDamage, xpToLevel } from "../engine.js";
-import { esc, warnings } from "../html.js";
+import { esc, usesCounter, warnings } from "../html.js";
 import { QUESTIONS, state } from "../state.js";
 
 export function record(hero, sheet) {
@@ -149,10 +149,15 @@ function unarmedRow(hero, sheet) {
 function weaponRow(hero, item, sheet) {
   const profile = attackProfile(hero, item, sheet);
   const props = (item.props || []).map((id) => id[0].toUpperCase() + id.slice(1)).join(", ");
+  const asleep = props && !profile.trained ? " · properties asleep until trained" : "";
+  const extra = item.notes || item.usesMax;
   return `
-    <button class="weapon" data-act="roll-weapon" data-uid="${item.uid}">
-      <span class="who"><strong>${esc(item.name)}</strong><small>${esc(weaponDamage(item, hero))} · ${esc(item.range)} · ${esc(props || "no properties")}${profile.trained ? "" : " · properties asleep until trained"}</small></span>
-      <span class="dc">${profile.skill ? profile.skill.dc : "—"}</span>
-      <span class="muted">${profile.skill ? esc(profile.skill.name) : ""}</span>
-    </button>`;
+    <div class="weapon-wrap">
+      <button class="weapon" data-act="roll-weapon" data-uid="${item.uid}">
+        <span class="who"><strong>${esc(item.name)}</strong><small>${esc(weaponDamage(item, hero))} · ${esc(item.range)} · ${esc(props || "no properties")}${asleep}</small></span>
+        <span class="dc">${profile.skill ? profile.skill.dc : "—"}</span>
+        <span class="muted">${profile.skill ? esc(profile.skill.name) : "No attack skill"}</span>
+      </button>
+      ${extra ? `<div class="weapon-extra">${item.notes ? `<small class="item-notes">${esc(item.notes)}</small>` : ""}${usesCounter(item)}</div>` : ""}
+    </div>`;
 }

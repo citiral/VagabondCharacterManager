@@ -189,6 +189,13 @@ function onAct(el) {
     const item = hero.items.find((entry) => entry.uid === el.dataset.uid);
     if (item) item.gripMode = item.gripMode === "2h" ? "1h" : "2h";
   } else if (act === "custom-item") return addCustom(hero);
+  else if (act === "edit-item") { state.editItem = el.dataset.uid; render(); return; }
+  else if (act === "edit-cancel") { state.editItem = ""; render(); return; }
+  else if (act === "uses") changeUses(hero, el.dataset.uid, Number(el.dataset.delta));
+  else if (act === "uses-fill") {
+    const item = hero.items.find((entry) => entry.uid === el.dataset.uid);
+    if (item?.usesMax) item.uses = item.usesMax;
+  }
   else if (act === "spell-add") toggleList(hero, "spells", el.dataset.id, true);
   else if (act === "spell-forget") {
     if (classById(hero.classId)?.requiredSpell === el.dataset.id) return;
@@ -284,19 +291,59 @@ function buy(hero, id) {
   commit(hero);
 }
 
+// Shown in place, since a render would clear what's typed into the form.
+function customError(message) {
+  const box = document.querySelector("#custom-error");
+  if (box) box.textContent = message;
+}
+
+// Adds a new piece, or saves the one being edited, from the custom form on the gear tab.
 function addCustom(hero) {
-  const name = document.querySelector("#custom-name")?.value?.trim();
-  if (!name) return;
-  const kind = document.querySelector("#custom-kind")?.value || "gear";
-  const slots = Math.max(0, Number(document.querySelector("#custom-slots")?.value || 1));
-  const value = parseMoney(document.querySelector("#custom-value")?.value || "0");
-  const raw = document.querySelector("#custom-weapon")?.value || "";
-  const [damage, range, grip] = raw.split(",").map((part) => part.trim());
-  hero.items.push({
-    ...instantiate({ id: "custom", name, kind, slots, value, damage: damage || (kind === "weapon" ? "d4" : ""), range: range || "Close", grip: grip || "1h", types: kind === "weapon" ? ["melee"] : [], props: [] }),
-    catalogId: null,
-  });
+  const pick = (selector) => document.querySelector(selector)?.value ?? "";
+  const checked = (selector) => [...document.querySelectorAll(`${selector}:checked`)].map((el) => el.value);
+  const name = pick("#custom-name").trim();
+  if (!name) return customError("Give the piece a name.");
+  const kind = pick("#custom-kind") || "gear";
+  const weapon = kind === "weapon";
+  const damage = pick("#custom-damage").toLowerCase().replace(/\s+/g, "");
+  if (weapon && damage && !/^(?:\d*d\d+(?:\+\d+)?|\d+)$/.test(damage)) {
+    return customError(`"${damage}" isn't a damage roll. Try d6, 2d6, or d8+1.`);
+  }
+  const types = weapon ? checked(".custom-type") : [];
+  if (weapon && !types.length) return customError("Pick at least one skill the weapon attacks with.");
+  const usesMax = Math.max(0, Math.trunc(Number(pick("#custom-uses")) || 0));
+  const fields = {
+    name,
+    kind,
+    slots: Math.max(0, Number(pick("#custom-slots") || 1)),
+    value: parseMoney(pick("#custom-value") || "0"),
+    damage: weapon ? damage || "d4" : "",
+    range: weapon ? pick("#custom-range") || "Close" : "",
+    grip: weapon ? pick("#custom-grip") || "1h" : "",
+    types,
+    props: weapon ? checked(".custom-prop") : [],
+    rating: kind === "armor" ? Math.max(0, Math.trunc(Number(pick("#custom-rating")) || 0)) : 0,
+    notes: pick("#custom-notes").trim(),
+    usesMax,
+  };
+  const existing = hero.items.find((item) => item.uid === state.editItem);
+  if (existing) {
+    const left = existing.usesMax ? existing.uses ?? existing.usesMax : usesMax;
+    Object.assign(existing, fields, { uses: Math.min(left, usesMax) });
+    if (existing.grip !== "v") existing.gripMode = existing.grip === "2h" ? "2h" : "1h";
+    if (weapon || kind === "armor") existing.qty = 1;
+  } else {
+    hero.items.push({ ...instantiate({ id: "custom", ...fields }), catalogId: null });
+  }
+  state.editItem = "";
   commit(hero);
+}
+
+function changeUses(hero, uid, delta) {
+  const item = hero.items.find((entry) => entry.uid === uid);
+  if (!item?.usesMax) return;
+  const left = item.uses ?? item.usesMax;
+  item.uses = Math.max(0, Math.min(item.usesMax, left + delta));
 }
 
 function rest(hero) {
@@ -355,6 +402,14 @@ function rollWeapon(hero, uid) {
   if (!item) return;
   const profile = attackProfile(hero, item, sheet);
   if (!profile.skill) return;
+  if (item.usesMax) {
+    const left = item.uses ?? item.usesMax;
+    if (left <= 0) return pushAndRender({ title: item.name, detail: "Empty. Refill it before attacking again.", pass: false });
+    if (canEdit(hero)) {
+      item.uses = left - 1;
+      scheduleSave(hero, true);
+    }
+  }
   const critAt = sheet.attackCrit;
   const check = rollCheck(`${item.name} · ${profile.skill.name}`, profile.skill.dc, critAt);
   if (check.pass) {

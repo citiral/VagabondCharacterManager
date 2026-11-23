@@ -173,6 +173,7 @@ function weaponProps(item, code) {
   for (const id of item.props || []) props.push(id[0].toUpperCase() + id.slice(1));
   if (String(item.grip || "").toLowerCase() === "v" && code !== "V") props.push("Versatile");
   if (String(item.grip || "").toLowerCase() === "v" && item.gripMode === "2h") props.push("held 2H");
+  if (item.usesMax) props.push(`${item.uses ?? item.usesMax}/${item.usesMax} shots`);
   return props.join(", ");
 }
 
@@ -204,6 +205,9 @@ function abilityLines(hero, sheet) {
       const secret = spellById(hero.magicalSecrets?.[slot.key]);
       if (secret) lines.push(`Magical Secret: ${secret.name}`);
     }
+  }
+  for (const item of hero.items || []) {
+    if (item.notes) lines.push(`${item.name}: ${item.notes}`);
   }
   if (hero.conditions?.length) lines.push(`Conditions: ${hero.conditions.join(", ")}`);
   if (hero.studied) lines.push(`Studied dice: ${hero.studied}`);

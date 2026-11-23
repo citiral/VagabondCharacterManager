@@ -9,6 +9,7 @@ function rollDie(sides) {
 
 export function rollExpr(expr, explode) {
   if (!expr || expr === "1") return { total: 1, text: "1" };
+  if (/^\d+$/.test(expr)) return { total: Number(expr), text: expr };
   const match = /^(?:(\d+)d(\d+)|d(\d+))(?:\+(\d+))?$/.exec(expr);
   if (!match) return { total: 0, text: expr };
   const count = Number(match[1] || 1);
